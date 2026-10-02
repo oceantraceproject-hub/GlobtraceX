@@ -1,0 +1,137 @@
+{
+  "brand": {
+    "name": "GLOBTRACEX",
+    "tagline": "Trace the Change. Understand the Evidence.",
+    "subtitle": "NASA Earth-Observation Trend Investigation Platform",
+    "team": "Team Protichamp",
+    "challenge": "NASA Space Apps Challenge 2026 • Challenge 02: Be An Earth System Trend Detective!",
+    "independentDisclaimer": "GlobTraceX is an independent student project developed by Team Protichamp for NASA Space Apps Challenge 2026. All NASA data is utilized under official open data policies."
+  },
+  "nav": {
+    "home": "Home",
+    "investigate": "Investigate",
+    "compare": "Compare",
+    "datasets": "NASA Datasets",
+    "references": "References",
+    "about": "About",
+    "team": "Team",
+    "auth": "Sign In",
+    "admin": "Admin",
+    "evidence": "Evidence"
+  },
+  "hero": {
+    "titleMain": "TRACE EARTH.",
+    "titleSub": "REVEAL THE CHANGE.",
+    "subtext": "Explore how Earth-system variables change across space and time using authentic NASA Earth-observation data, statistical trend analysis, and traceable scientific evidence.",
+    "ctaInvestigate": "Investigate a Trend",
+    "ctaCompare": "Compare Regions",
+    "integrityBadge": "Authentic NASA Earthdata • Deterministic Statistics • Zero Unverified Claims"
+  },
+  "questions": {
+    "heading": "The Four Scientific Questions",
+    "subheading": "Every investigation answers these four core inquiries with mathematical certainty:",
+    "q1": {
+      "title": "WHAT IS CHANGING?",
+      "desc": "Identify physical, hydrological, and biological indicators across Land Surface Temperature, Rainfall, Vegetation Greenness, and Terrestrial Water Storage.",
+      "tag": "NASA Variable Selection"
+    },
+    "q2": {
+      "title": "WHERE IS IT CHANGING?",
+      "desc": "Demarcate authentic geographic boundaries down to district-level administrative polygons with exact georeferenced coordinates.",
+      "tag": "Geographic Polygons"
+    },
+    "q3": {
+      "title": "HOW MUCH IS IT CHANGING?",
+      "desc": "Compute quantitative rates of change per year and decade using robust Theil-Sen non-parametric median slopes and 95% confidence intervals.",
+      "tag": "Theil-Sen Median Slope"
+    },
+    "q4": {
+      "title": "IS IT STATISTICALLY SIGNIFICANT?",
+      "desc": "Evaluate the null hypothesis of no trend using the rank-based Mann-Kendall test, calculating standardized Z-scores and exact two-tailed p-values.",
+      "tag": "Mann-Kendall p-value"
+    }
+  },
+  "variables": {
+    "lst": {
+      "name": "Land Surface Temperature (LST)",
+      "units": "°C",
+      "desc": "Daytime radiometric surface temperature from MODIS Terra thermal infrared bands.",
+      "sensor": "MODIS Terra (MOD11C3 v061)"
+    },
+    "rainfall": {
+      "name": "Monthly Precipitation",
+      "units": "mm/month",
+      "desc": "Calibrated multi-satellite microwave and radar precipitation from NASA GPM IMERG.",
+      "sensor": "NASA GPM IMERG (GPM_3IMERGM v07)"
+    },
+    "ndvi": {
+      "name": "Normalized Difference Vegetation Index (NDVI)",
+      "units": "index (-1 to +1)",
+      "desc": "Surface canopy photosynthetic vitality derived from red and near-infrared reflectance.",
+      "sensor": "MODIS Terra (MOD13C2 v061)"
+    },
+    "tws": {
+      "name": "Terrestrial Water Storage Anomaly",
+      "units": "cm equivalent water",
+      "desc": "Integrated groundwater, soil moisture, and surface water anomalies from satellite gravimetry.",
+      "sensor": "NASA GRACE / GRACE-FO Tellus (RL06M)"
+    },
+    "solar": {
+      "name": "Surface Solar Irradiance",
+      "units": "MJ/m²/day",
+      "desc": "All-sky surface downward solar radiation flux from NASA POWER assimilations.",
+      "sensor": "NASA POWER (CERES / MERRA-2)"
+    }
+  },
+  "stats": {
+    "direction": "Trend Direction",
+    "slope": "Theil-Sen Slope",
+    "perDecade": "per decade",
+    "pValue": "p-value (Mann-Kendall)",
+    "significant": "Statistically Significant",
+    "notSignificant": "Not Statistically Significant",
+    "ci": "95% Confidence Interval",
+    "observations": "Valid Observations",
+    "coverage": "Data Coverage",
+    "missingData": "Missing Observations",
+    "increasing": "Observed Increasing Trend",
+    "decreasing": "Observed Decreasing Trend",
+    "stable": "No Monotonic Trend Detected",
+    "trendSignalIndex": "Trend Signal Index",
+    "tsiDisclaimer": "This indicator summarizes the strength and consistency of observed environmental change in the selected data. It is not a probability or forecast of harm.",
+    "insufficientData": "Insufficient observations for a statistically reliable trend estimate."
+  },
+  "evidence": {
+    "viewEvidence": "VIEW EVIDENCE",
+    "evidenceDrawerTitle": "Scientific Provenance Chain",
+    "provenanceSubtitle": "Trace this exact scientific result from sensor retrieval to mathematical derivation:",
+    "dataset": "Dataset",
+    "datasetId": "Dataset ID",
+    "mission": "NASA Mission",
+    "instrument": "Instrument / Sensor",
+    "productVersion": "Product Version",
+    "processingLevel": "Processing Level",
+    "officialSource": "Official Source",
+    "documentation": "Documentation",
+    "doi": "DOI",
+    "retrievalTimestamp": "Retrieval Timestamp",
+    "validationStatus": "Source Validation",
+    "verifiedSource": "Official NASA Source Verified",
+    "rawStructuredOutput": "Raw Deterministic Result Payload",
+    "copyPayload": "Copy Evidence JSON"
+  },
+  "compare": {
+    "title": "Two-District Environmental Trend Comparison",
+    "subtitle": "Compare observed rates of change, confidence bounds, and data completeness side by side.",
+    "selectRegionA": "Select Region A",
+    "selectRegionB": "Select Region B",
+    "syncHighlight": "Synchronized 3D Geospatial Highlighting Active"
+  },
+  "datasetsPage": {
+    "title": "NASA Data Source Registry",
+    "subtitle": "Every NASA Earth-observation dataset connected to GlobTraceX originates from official NASA-controlled distribution portals.",
+    "verifiedBadge": "Official Source Verified",
+    "openSource": "Open Official Source",
+    "docsLink": "NASA Technical Docs"
+  }
+}

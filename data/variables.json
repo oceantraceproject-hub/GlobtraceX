@@ -1,0 +1,62 @@
+[
+  {
+    "id": "sst",
+    "name": "Sea Surface Temperature",
+    "short_name": "SST",
+    "domain": "ocean",
+    "unit": "°C",
+    "sensor": "Aqua MODIS L3m (11-12 µm IR thermal)",
+    "description": "Physical thermodynamic temperature of the top ocean skin layer, critical for marine heatwave detection and atmospheric circulation.",
+    "dataset_id": "MODISA_L3m_SST_4km_Monthly"
+  },
+  {
+    "id": "chlorophyll",
+    "name": "Chlorophyll-a Concentration",
+    "short_name": "CHL-A",
+    "domain": "ocean",
+    "unit": "mg/m³",
+    "sensor": "Aqua MODIS / PACE OCI (Blue-green spectral ratio)",
+    "description": "Bio-optical proxy for phytoplankton density at the base of the marine food web, sensitive to nutrient upwelling and river runoff.",
+    "dataset_id": "MODISA_L3m_CHL_4km_Monthly"
+  },
+  {
+    "id": "ssh_anomaly",
+    "name": "Sea Surface Height Anomaly",
+    "short_name": "SSHA",
+    "domain": "ocean",
+    "unit": "cm",
+    "sensor": "SWOT KaRIn (Interferometric radar altimetry)",
+    "description": "Altimetric deviation from the mean sea surface, resolving dynamic ocean eddies and thermal expansion (SHORT-RECORD context).",
+    "dataset_id": "SWOT_L2_LR_SSH_2.0"
+  },
+  {
+    "id": "lst",
+    "name": "Land Surface Temperature",
+    "short_name": "LST",
+    "domain": "land",
+    "unit": "°C",
+    "sensor": "Terra MODIS (MOD11A2 1km thermal IR)",
+    "description": "Direct radiative surface skin temperature of the land, tracking urban heat island expansion, soil moisture deficit, and extreme heat events.",
+    "dataset_id": "MOD11A2_LST_Day_1km"
+  },
+  {
+    "id": "rainfall",
+    "name": "Monthly Total Rainfall",
+    "short_name": "Precip",
+    "domain": "land",
+    "unit": "mm/month",
+    "sensor": "GPM IMERG Final (0.1° satellite-gauge merged)",
+    "description": "Total monthly accumulated precipitation, tracking monsoonal intensity shifts, haor wetland inundation, and agricultural drought risk.",
+    "dataset_id": "GPM_3IMERGM_Precip"
+  },
+  {
+    "id": "vegetation",
+    "name": "Vegetation Index (NDVI)",
+    "short_name": "NDVI",
+    "domain": "land",
+    "unit": "index (0 to 1)",
+    "sensor": "Terra MODIS (MOD13A2 1km NIR/Red)",
+    "description": "Normalized Difference Vegetation Index tracking photosynthetic biomass, agricultural cropping vigor, and mangrove canopy stability.",
+    "dataset_id": "MOD13A2_NDVI_16Day_1km"
+  }
+]

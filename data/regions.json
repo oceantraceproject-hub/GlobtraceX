@@ -1,0 +1,160 @@
+{
+  "ocean_regions": [
+    {
+      "id": "bay-of-bengal",
+      "name": "Bay of Bengal",
+      "domain": "ocean",
+      "category": "Featured",
+      "coordinates": { "latMin": 10.0, "latMax": 22.0, "lonMin": 80.0, "lonMax": 95.0 },
+      "center": [88.0, 16.0],
+      "area": "2,172,000 km²",
+      "description": "Semi-enclosed tropical basin exhibiting rapid thermal warming, massive Ganges-Brahmaputra river freshwater discharge, stratification, and frequent severe tropical cyclones.",
+      "is_featured": true
+    },
+    {
+      "id": "global-ocean",
+      "name": "Global Ocean (60°S – 60°N)",
+      "domain": "ocean",
+      "category": "Global",
+      "coordinates": { "latMin": -60.0, "latMax": 60.0, "lonMin": -180.0, "lonMax": 180.0 },
+      "center": [0.0, 0.0],
+      "area": "335,000,000 km²",
+      "description": "Global non-polar open-ocean waters observing multi-decadal thermodynamic planetary heat uptake and upper-layer heat content redistribution.",
+      "is_featured": false
+    },
+    {
+      "id": "equatorial-pacific",
+      "name": "Equatorial Pacific (Niño 3.4)",
+      "domain": "ocean",
+      "category": "Ocean Basin",
+      "coordinates": { "latMin": -5.0, "latMax": 5.0, "lonMin": -170.0, "lonMax": -120.0 },
+      "center": [-145.0, 0.0],
+      "area": "6,200,000 km²",
+      "description": "Primary index region for El Niño–Southern Oscillation (ENSO), driving coupled planetary ocean-atmosphere teleconnections.",
+      "is_featured": false
+    },
+    {
+      "id": "western-mediterranean",
+      "name": "Western Mediterranean Sea",
+      "domain": "ocean",
+      "category": "Marginal Sea",
+      "coordinates": { "latMin": 36.0, "latMax": 44.0, "lonMin": -5.0, "lonMax": 10.0 },
+      "center": [3.5, 40.0],
+      "area": "840,000 km²",
+      "description": "Enclosed marginal sea experiencing amplified thermal warming at 2.4x the global open-ocean average, triggering recurrent marine heatwaves.",
+      "is_featured": false
+    },
+    {
+      "id": "north-atlantic-gyre",
+      "name": "North Atlantic Subpolar Gyre",
+      "domain": "ocean",
+      "category": "Ocean Basin",
+      "coordinates": { "latMin": 50.0, "latMax": 65.0, "lonMin": -45.0, "lonMax": -15.0 },
+      "center": [-30.0, 57.5],
+      "area": "3,800,000 km²",
+      "description": "High-latitude region critical to Atlantic Meridional Overturning Circulation (AMOC) deep water formation and North Atlantic freshening.",
+      "is_featured": false
+    },
+    {
+      "id": "arabian-sea",
+      "name": "Arabian Sea (Western Indian Ocean)",
+      "domain": "ocean",
+      "category": "Marginal Sea",
+      "coordinates": { "latMin": 12.0, "latMax": 24.0, "lonMin": 55.0, "lonMax": 73.0 },
+      "center": [64.0, 18.0],
+      "area": "3,860,000 km²",
+      "description": "Monsoon-driven upwelling basin hosting the world's thickest open-ocean oxygen minimum zone (OMZ) and widespread seasonal algal blooms.",
+      "is_featured": false
+    }
+  ],
+  "bangladesh_districts": [
+    {
+      "id": "dhaka",
+      "name": "Dhaka",
+      "division": "Dhaka",
+      "domain": "bangladesh",
+      "coordinates": { "latMin": 23.53, "latMax": 24.05, "lonMin": 90.01, "lonMax": 90.58 },
+      "center": [90.41, 23.81],
+      "area": "1,463 km²",
+      "zone_type": "Megacity / Urban Heat Island",
+      "description": "Dense urban core and capital region exhibiting pronounced urban heat island expansion, rapid wetland infill, and impervious surface warming."
+    },
+    {
+      "id": "chittagong",
+      "name": "Chittagong",
+      "division": "Chittagong",
+      "domain": "bangladesh",
+      "coordinates": { "latMin": 21.90, "latMax": 22.98, "lonMin": 91.45, "lonMax": 92.38 },
+      "center": [91.83, 22.35],
+      "area": "5,282 km²",
+      "zone_type": "Coastal Port & Hilly Maritime",
+      "description": "Primary southeastern maritime port and coastal interface bordering the Bay of Bengal, vulnerable to storm surge and flash flooding."
+    },
+    {
+      "id": "sylhet",
+      "name": "Sylhet",
+      "division": "Sylhet",
+      "domain": "bangladesh",
+      "coordinates": { "latMin": 24.60, "latMax": 25.20, "lonMin": 91.65, "lonMax": 92.50 },
+      "center": [91.86, 24.89],
+      "area": "3,490 km²",
+      "zone_type": "Northeastern Wetland & High Rainfall",
+      "description": "High-rainfall basin directly south of Meghalaya plateau; hosts extensive seasonal Haor wetland ecosystems and tea estates."
+    },
+    {
+      "id": "khulna",
+      "name": "Khulna (Sundarbans Interface)",
+      "division": "Khulna",
+      "domain": "bangladesh",
+      "coordinates": { "latMin": 21.65, "latMax": 23.00, "lonMin": 89.15, "lonMax": 89.95 },
+      "center": [89.54, 22.84],
+      "area": "4,394 km²",
+      "zone_type": "Coastal Mangrove & Saline Delta",
+      "description": "Southwestern coastal delta anchoring the Sundarbans mangrove biosphere; highly vulnerable to salinity intrusion, cyclones, and tidal floods."
+    },
+    {
+      "id": "rajshahi",
+      "name": "Rajshahi (Barind Tract)",
+      "division": "Rajshahi",
+      "domain": "bangladesh",
+      "coordinates": { "latMin": 24.12, "latMax": 24.72, "lonMin": 88.28, "lonMax": 88.98 },
+      "center": [88.60, 24.37],
+      "area": "2,407 km²",
+      "zone_type": "Northwestern Drought-Prone Barind",
+      "description": "Northwestern elevated Pleistocene clay terrace experiencing high summer land surface temperatures and recurrent agricultural droughts."
+    },
+    {
+      "id": "coxs-bazar",
+      "name": "Cox's Bazar",
+      "division": "Chittagong",
+      "domain": "bangladesh",
+      "coordinates": { "latMin": 20.65, "latMax": 21.75, "lonMin": 91.85, "lonMax": 92.35 },
+      "center": [92.00, 21.42],
+      "area": "2,491 km²",
+      "zone_type": "Coastal Beach & Refugee Corridor",
+      "description": "Southernmost coastal district with the world's longest unbroken natural sandy beach; sensitive to coastal erosion and hill deforestation."
+    },
+    {
+      "id": "barisal",
+      "name": "Barisal",
+      "division": "Barisal",
+      "domain": "bangladesh",
+      "coordinates": { "latMin": 22.45, "latMax": 23.08, "lonMin": 90.05, "lonMax": 90.65 },
+      "center": [90.36, 22.70],
+      "area": "2,784 km²",
+      "zone_type": "Lowland Estuarine Delta",
+      "description": "Intricate estuarine river network of the lower Ganges-Brahmaputra-Meghna confluence; fertile rice-producing delta exposed to tidal flooding."
+    },
+    {
+      "id": "rangpur",
+      "name": "Rangpur",
+      "division": "Rangpur",
+      "domain": "bangladesh",
+      "coordinates": { "latMin": 25.30, "latMax": 25.95, "lonMin": 88.95, "lonMax": 89.45 },
+      "center": [89.24, 25.74],
+      "area": "2,308 km²",
+      "zone_type": "Northern Teesta Alluvial Plain",
+      "description": "Northern agrarian plain traversed by the Teesta and Brahmaputra rivers; subject to extreme cold waves in winter and riverbank erosion in monsoon."
+    }
+  ]
+}

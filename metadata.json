@@ -1,0 +1,6 @@
+{
+  "name": "Ocean Trace",
+  "description": "Trace the change. Understand the ocean. A global ocean trend exploration and analysis platform powered by NASA Earth-observation data.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

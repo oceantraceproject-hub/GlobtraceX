@@ -1,0 +1,90 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile document",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 256 },
+        "displayName": { "type": "string", "maxLength": 128 },
+        "photoURL": { "type": "string", "maxLength": 512 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "createdAt"]
+    },
+    "SavedInvestigation": {
+      "title": "SavedInvestigation",
+      "description": "User-saved scientific ocean investigation",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 128 },
+        "regionId": { "type": "string", "maxLength": 64 },
+        "variable": { "type": "string", "maxLength": 64 },
+        "datasetId": { "type": "string", "maxLength": 64 },
+        "timeRange": { "type": "string", "maxLength": 64 },
+        "trendEstimate": { "type": "string", "maxLength": 64 },
+        "statisticalResult": { "type": "string", "maxLength": 128 },
+        "notes": { "type": "string", "maxLength": 1000 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "title", "regionId", "variable", "createdAt"]
+    },
+    "SavedComparison": {
+      "title": "SavedComparison",
+      "description": "User-saved cross-variable comparison",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 128 },
+        "regionId": { "type": "string", "maxLength": 64 },
+        "variableA": { "type": "string", "maxLength": 64 },
+        "variableB": { "type": "string", "maxLength": 64 },
+        "timeRange": { "type": "string", "maxLength": 64 },
+        "correlation": { "type": "string", "maxLength": 64 },
+        "notes": { "type": "string", "maxLength": 1000 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "title", "regionId", "variableA", "variableB", "createdAt"]
+    },
+    "TeamMember": {
+      "title": "TeamMember",
+      "description": "NASA Space Apps team member managed by admin with under-18 privacy controls",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 128 },
+        "role": { "type": "string", "maxLength": 128 },
+        "photoUrl": { "type": "string", "maxLength": 512 },
+        "displayOrder": { "type": "number" },
+        "isPublic": { "type": "boolean" },
+        "under18": { "type": "boolean" },
+        "bio": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "role", "displayOrder", "isPublic", "under18"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "User profile documents"
+    },
+    "/users/{userId}/savedInvestigations/{investigationId}": {
+      "schema": { "$ref": "#/entities/SavedInvestigation" },
+      "description": "User's saved scientific ocean investigations"
+    },
+    "/users/{userId}/savedComparisons/{comparisonId}": {
+      "schema": { "$ref": "#/entities/SavedComparison" },
+      "description": "User's saved cross-variable comparisons"
+    },
+    "/teamMembers/{memberId}": {
+      "schema": { "$ref": "#/entities/TeamMember" },
+      "description": "Public and admin-managed Space Apps team members"
+    }
+  }
+}

@@ -23,11 +23,11 @@ export const AboutPage: React.FC<{ onNavigate: (route: string) => void }> = ({ o
             <Award className="w-3.5 h-3.5" />
             <span>NASA SPACE APPS CHALLENGE 2026 • CHALLENGE 02</span>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
+          <h1 className="text-3xl sm:text-4xl font-black text-slate-950 tracking-tight font-['Space_Grotesk']">
             About GlobTraceX
           </h1>
           <p className="text-purple-700 font-mono text-xs uppercase tracking-widest font-bold">
-            TRACE THE CHANGE. UNDERSTAND THE EVIDENCE.
+            SEE THE CHANGE. TEST THE TREND. TRACE THE EVIDENCE.
           </p>
         </div>
 
@@ -35,10 +35,20 @@ export const AboutPage: React.FC<{ onNavigate: (route: string) => void }> = ({ o
         <div className="bg-white rounded-2xl p-5 border border-purple-100 shadow-xs flex items-start gap-4">
           <ShieldCheck className="w-6 h-6 text-purple-600 shrink-0 mt-0.5" />
           <div className="text-xs space-y-1">
-            <h3 className="font-extrabold text-slate-900">Official Student Project Disclaimer</h3>
-            <p className="text-slate-600 leading-relaxed">
-              GlobTraceX is an independent student project developed by <strong>Team Protichamp</strong> for the NASA Space Apps Challenge 2026, competing in Challenge 02: “Be An Earth System Trend Detective!” All NASA datasets, satellite imagery, and mission references are utilized in accordance with official NASA open data distribution policies. GlobTraceX is not an official NASA website, agency product, or commercial endorsement.
+            <h3 className="font-extrabold text-slate-900 font-['Space_Grotesk']">
+              Official Student Project Charter
+            </h3>
+            <p className="text-slate-600 leading-relaxed font-sans">
+              GlobTraceX is an independent student research project developed by <strong>Team Protichamp</strong> for the NASA Space Apps Challenge 2026, competing in Challenge 02: “Be An Earth System Trend Detective!” All NASA Earth-observation records and mission references are analyzed in accordance with official open data distribution policies. GlobTraceX is developed independently and does not represent an official NASA website, agency product, or commercial endorsement.
             </p>
+            <div className="pt-2">
+              <button
+                onClick={() => onNavigate('/team')}
+                className="text-purple-700 hover:text-purple-900 font-bold font-mono text-[11px] underline flex items-center gap-1"
+              >
+                <span>View Team Protichamp Roster & Roles →</span>
+              </button>
+            </div>
           </div>
         </div>
 

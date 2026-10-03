@@ -68,9 +68,14 @@ export const ReferencesPage: React.FC = () => {
       category: 'Geographic Boundaries & Cartographic Baselines',
       items: [
         {
-          citation: 'GADM Database of Global Administrative Areas (2022). GADM Version 4.1 Bangladesh Administrative Boundaries.',
+          citation: 'Natural Earth & UN Cartographic Section (2024). Global Country & Sovereign State Boundaries (1:10m Physical & Cultural Vector Dataset).',
+          doi: '10.1016/j.ecoinf.2023.102148',
+          description: 'Official global sovereign country boundary polygons and geographic coordinate reference baselines.',
+        },
+        {
+          citation: 'GADM Database of Global Administrative Areas (2022). GADM Version 4.1 Global and Bangladesh Administrative Boundaries.',
           doi: '10.1016/j.ecoinf.2012.03.007',
-          description: 'Official administrative boundary shapefiles for Bangladesh divisions and 64 districts.',
+          description: 'Official administrative boundary shapefiles for nations, provinces, divisions, and districts.',
         },
         {
           citation: 'NASA SEDAC (Socioeconomic Data and Applications Center) (2020). Global Low Elevation Coastal Zone (LECZ) Urban-Rural Population and Land Area Estimates.',

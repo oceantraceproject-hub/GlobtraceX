@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { NASA_DATASET_REGISTRY } from '../data/nasaRegistry';
+import { GLOBAL_COUNTRIES } from '../data/globalCountries';
 import { BANGLADESH_DISTRICTS } from '../data/bangladeshData';
-import { Search, X, Database, Compass, BookOpen, ArrowRight, MapPin } from 'lucide-react';
+import { Search, X, Database, Compass, BookOpen, ArrowRight, MapPin, Globe } from 'lucide-react';
 
 interface SearchModalProps {
   isOpen: boolean;
@@ -28,6 +29,23 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, onNav
   const results = useMemo(() => {
     if (!query.trim()) return [];
     const q = query.toLowerCase();
+
+    const matchedCountries = GLOBAL_COUNTRIES.filter(
+      (c) =>
+        c.name.toLowerCase().includes(q) ||
+        c.nameBn.toLowerCase().includes(q) ||
+        c.code.toLowerCase().includes(q) ||
+        c.code3.toLowerCase().includes(q) ||
+        c.region.toLowerCase().includes(q) ||
+        c.continent.toLowerCase().includes(q) ||
+        c.capital.toLowerCase().includes(q)
+    ).map((c) => ({
+      title: `${c.name} (${c.code3})`,
+      subtitle: `${c.region}, ${c.continent} • Capital: ${c.capital}`,
+      badge: 'Country',
+      route: '/investigate',
+      icon: Globe,
+    }));
 
     const matchedDatasets = NASA_DATASET_REGISTRY.filter(
       (d) =>
@@ -66,7 +84,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose, onNav
         icon: BookOpen,
       }));
 
-    return [...matchedDatasets, ...matchedDistricts, ...matchedTerms];
+    return [...matchedCountries, ...matchedDatasets, ...matchedDistricts, ...matchedTerms];
   }, [query]);
 
   if (!isOpen) return null;

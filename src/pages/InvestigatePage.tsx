@@ -1,5 +1,12 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useLanguage } from '../context/LanguageContext';
+import {
+  GLOBAL_COUNTRIES,
+  GlobalCountry,
+  getCountryByCode,
+  searchCountries,
+  getCountriesByContinent,
+} from '../data/globalCountries';
 import {
   BANGLADESH_DIVISIONS,
   BANGLADESH_DISTRICTS,
@@ -7,11 +14,14 @@ import {
 } from '../data/bangladeshData';
 import { NASA_DATASET_REGISTRY, NasaSourceRecord } from '../data/nasaRegistry';
 import {
+  computeCountryTrend,
   computeDeterministicTrend,
+  generateCountryObservations,
   generateDistrictObservations,
-  StructuredScientificResult,
+  GlobalScientificResult,
+  ScientificObservation,
 } from '../compute/globTraceScience';
-import { EarthExplorer, GeoLevel } from '../components/EarthExplorer';
+import { EarthExplorer } from '../components/EarthExplorer';
 import { GlobTraceChart } from '../components/GlobTraceChart';
 import { EvidenceDrawer } from '../components/EvidenceDrawer';
 import {
@@ -34,6 +44,10 @@ import {
   FileText,
   Activity,
   Globe,
+  Search,
+  GitCompare,
+  CheckCircle2,
+  Lock,
 } from 'lucide-react';
 
 interface InvestigatePageProps {
@@ -43,20 +57,50 @@ interface InvestigatePageProps {
 export const InvestigatePage: React.FC<InvestigatePageProps> = ({ onNavigate }) => {
   const { t } = useLanguage();
 
+  // Primary Geographic State: Global Country
+  const [selectedContinent, setSelectedContinent] = useState<string>('All');
+  const [countrySearch, setCountrySearch] = useState<string>('');
+  const [selectedCountryCode, setSelectedCountryCode] = useState<string>('BD');
+
+  // Sub-district exploration for Bangladesh (Demonstration model)
+  const [isDistrictMode, setIsDistrictMode] = useState<boolean>(false);
   const [selectedDivisionId, setSelectedDivisionId] = useState<string>('all');
   const [selectedDistrictId, setSelectedDistrictId] = useState<string>('coxs-bazar');
+
+  // Scientific Variable & Chart Controls
   const [selectedVariable, setSelectedVariable] = useState<'lst' | 'rainfall' | 'ndvi' | 'tws' | 'solar'>('lst');
   const [useAnomalies, setUseAnomalies] = useState<boolean>(true);
   const [isEvidenceDrawerOpen, setIsEvidenceDrawerOpen] = useState<boolean>(false);
 
-  // Filter districts by division
+  // Active country object
+  const activeCountry: GlobalCountry = useMemo(() => {
+    return getCountryByCode(selectedCountryCode) || GLOBAL_COUNTRIES[0];
+  }, [selectedCountryCode]);
+
+  // Countries filtered by continent and search query
+  const filteredCountries = useMemo(() => {
+    let list = getCountriesByContinent(selectedContinent);
+    if (countrySearch.trim()) {
+      const q = countrySearch.trim().toLowerCase();
+      list = list.filter(
+        (c) =>
+          c.name.toLowerCase().includes(q) ||
+          c.nameBn.toLowerCase().includes(q) ||
+          c.code.toLowerCase().includes(q) ||
+          c.code3.toLowerCase().includes(q) ||
+          c.capital.toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [selectedContinent, countrySearch]);
+
+  // Bangladesh district filtering (if in district mode)
   const filteredDistricts = useMemo(() => {
     if (selectedDivisionId === 'all') return BANGLADESH_DISTRICTS;
     return BANGLADESH_DISTRICTS.filter((d) => d.divisionId === selectedDivisionId);
   }, [selectedDivisionId]);
 
-  // Selected district record
-  const selectedDistrict = useMemo(() => {
+  const activeDistrict = useMemo(() => {
     return (
       BANGLADESH_DISTRICTS.find((d) => d.id === selectedDistrictId) ||
       filteredDistricts[0] ||
@@ -64,7 +108,7 @@ export const InvestigatePage: React.FC<InvestigatePageProps> = ({ onNavigate }) 
     );
   }, [selectedDistrictId, filteredDistricts]);
 
-  // Active NASA dataset
+  // Active NASA dataset metadata
   const activeDataset: NasaSourceRecord = useMemo(() => {
     return (
       NASA_DATASET_REGISTRY.find((d) => d.variable === selectedVariable) ||
@@ -73,16 +117,29 @@ export const InvestigatePage: React.FC<InvestigatePageProps> = ({ onNavigate }) 
   }, [selectedVariable]);
 
   // Deterministic scientific analysis result
-  const scientificResult: StructuredScientificResult = useMemo(() => {
-    return computeDeterministicTrend(selectedDistrict.id, selectedVariable, useAnomalies);
-  }, [selectedDistrict.id, selectedVariable, useAnomalies]);
+  const scientificResult: GlobalScientificResult = useMemo(() => {
+    if (isDistrictMode && activeCountry.code === 'BD') {
+      return computeDeterministicTrend(activeDistrict.id, selectedVariable, useAnomalies);
+    }
+    return computeCountryTrend(activeCountry.code, selectedVariable);
+  }, [isDistrictMode, activeCountry.code, activeDistrict.id, selectedVariable, useAnomalies]);
 
   // Monthly observations for chart
-  const { observations } = useMemo(() => {
-    return generateDistrictObservations(selectedDistrict.id, selectedVariable);
-  }, [selectedDistrict.id, selectedVariable]);
+  const { observations } = useMemo<{ observations: ScientificObservation[] }>(() => {
+    if (isDistrictMode && activeCountry.code === 'BD') {
+      return generateDistrictObservations(activeDistrict.id, selectedVariable);
+    }
+    return generateCountryObservations(activeCountry.code, selectedVariable);
+  }, [isDistrictMode, activeCountry.code, activeDistrict.id, selectedVariable]);
 
-  // Variable tabs
+  // When switching country away from BD, exit district mode
+  useEffect(() => {
+    if (activeCountry.code !== 'BD') {
+      setIsDistrictMode(false);
+    }
+  }, [activeCountry.code]);
+
+  // 5 NASA Observational Variables
   const variableTabs = [
     {
       id: 'lst' as const,
@@ -90,70 +147,76 @@ export const InvestigatePage: React.FC<InvestigatePageProps> = ({ onNavigate }) 
       units: '°C',
       icon: Thermometer,
       sensor: 'MODIS Terra (MOD11C3)',
+      rate: activeCountry.trendLST > 0 ? `+${activeCountry.trendLST}°C/dec` : `${activeCountry.trendLST}°C/dec`,
     },
     {
       id: 'rainfall' as const,
-      label: 'Monthly Rainfall',
+      label: 'Precipitation / Rainfall',
       units: 'mm/mo',
       icon: CloudRain,
       sensor: 'GPM IMERG (v07B)',
+      rate: activeCountry.trendRainfall > 0 ? `+${activeCountry.trendRainfall}%/dec` : `${activeCountry.trendRainfall}%/dec`,
     },
     {
       id: 'ndvi' as const,
-      label: 'Vegetation (NDVI)',
-      units: 'Index',
+      label: 'Vegetation Index',
+      units: 'NDVI',
       icon: Sprout,
-      sensor: 'MODIS / VIIRS (v061)',
+      sensor: 'MODIS (MOD13C2)',
+      rate: activeCountry.trendNDVI > 0 ? `+${activeCountry.trendNDVI}%/dec` : `${activeCountry.trendNDVI}%/dec`,
     },
     {
       id: 'tws' as const,
-      label: 'Water Storage (TWS)',
-      units: 'cm-EWT',
+      label: 'Water Storage Anomaly',
+      units: 'cm EWT',
       icon: Waves,
-      sensor: 'GRACE / GRACE-FO (RL06M)',
+      sensor: 'GRACE / GRACE-FO',
+      rate: `${activeCountry.trendTWS} cm/dec`,
     },
     {
       id: 'solar' as const,
-      label: 'Solar Radiation',
+      label: 'Solar Irradiance',
       units: 'MJ/m²',
       icon: Sun,
-      sensor: 'NASA POWER (MERRA-2)',
+      sensor: 'NASA POWER (GHI)',
+      rate: '-0.6 MJ/dec',
     },
   ];
 
   return (
     <div className="w-full bg-[#fafaff] text-slate-900 min-h-screen pb-16 font-['Manrope']">
-      {/* Top Header & Context Controls */}
-      <section className="bg-white border-b border-purple-100 pt-6 pb-5 px-4 sm:px-6 lg:px-8 shadow-2xs">
-        <div className="max-w-7xl mx-auto space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5">
-              <div className="p-2 rounded-xl bg-purple-100 text-purple-700 shrink-0">
-                <MapPin className="w-5 h-5 animate-pulse" />
+      {/* Top Bar: Mission Header & Variable Selector Strip */}
+      <section className="bg-white border-b border-purple-100 shadow-xs">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="space-y-1 min-w-0">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-50 border border-purple-200 text-purple-900 text-[11px] font-semibold font-mono tracking-wider">
+                <Globe className="w-3.5 h-3.5 text-purple-700" />
+                <span>GLOBAL EARTH SYSTEM TREND INVESTIGATION LAB</span>
               </div>
-              <div className="min-w-0">
-                <span className="text-[10px] font-mono tracking-widest uppercase text-purple-700 font-bold block truncate">
-                  GLOBTRACEX • SCIENTIFIC INVESTIGATION WORKSTATION
-                </span>
-                <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 font-['Space_Grotesk'] truncate">
-                  {selectedDistrict.name} District, {selectedDistrict.divisionName} Division
-                </h1>
-              </div>
+              <h1 className="text-2xl sm:text-3xl font-black text-slate-950 font-['Space_Grotesk'] tracking-tight truncate">
+                {isDistrictMode ? `${activeDistrict.name} District` : activeCountry.name} • {scientificResult.variableName}
+              </h1>
+              <p className="text-xs text-slate-500 font-mono">
+                {isDistrictMode
+                  ? `Sub-national spatial model • ${activeDistrict.divisionName} Division, Bangladesh`
+                  : `Spatially aggregated across ${activeCountry.areaSqKm.toLocaleString()} km² • ${activeCountry.region}, ${activeCountry.continent}`}
+              </p>
             </div>
 
             {/* Quick Actions */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5">
               <button
                 onClick={() => onNavigate('/compare')}
-                className="px-3.5 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-800 text-xs font-bold transition-all flex items-center gap-1.5"
+                className="px-3.5 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-900 text-xs font-bold font-mono transition-colors flex items-center gap-1.5"
               >
-                <span>Compare Regions</span>
-                <ArrowRight className="w-3.5 h-3.5" />
+                <GitCompare className="w-3.5 h-3.5 text-purple-700" />
+                <span>Compare Countries</span>
               </button>
 
               <button
                 onClick={() => setIsEvidenceDrawerOpen(true)}
-                className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm active:scale-95 shrink-0"
+                className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm active:scale-95 shrink-0 font-['Space_Grotesk']"
               >
                 <ShieldCheck className="w-4 h-4" />
                 <span>{t('evidence.viewEvidence')}</span>
@@ -161,7 +224,7 @@ export const InvestigatePage: React.FC<InvestigatePageProps> = ({ onNavigate }) 
             </div>
           </div>
 
-          {/* Variable Selector Tabs */}
+          {/* 5 NASA Variable Selector Tabs */}
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-1">
             {variableTabs.map((tab) => {
               const Icon = tab.icon;
@@ -190,6 +253,9 @@ export const InvestigatePage: React.FC<InvestigatePageProps> = ({ onNavigate }) 
                   <div className={`text-[10px] font-mono truncate mt-0.5 ${isSelected ? 'text-purple-200' : 'text-slate-400'}`}>
                     {tab.sensor}
                   </div>
+                  <div className={`text-[11px] font-mono font-bold mt-1 ${isSelected ? 'text-purple-300' : 'text-purple-700'}`}>
+                    {tab.rate}
+                  </div>
                 </button>
               );
             })}
@@ -200,58 +266,69 @@ export const InvestigatePage: React.FC<InvestigatePageProps> = ({ onNavigate }) 
       {/* Main Workstation Layout */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 space-y-6">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* Left Column: District & Administrative Selectors (4 cols) */}
+          {/* Left Column: Geographic Country Registry & Administrative Filters (4 cols) */}
           <div className="lg:col-span-4 space-y-4">
-            {/* Division Filter */}
-            <div className="p-4 rounded-2xl bg-white border border-purple-100 shadow-xs space-y-2">
-              <label className="text-[10px] font-mono text-purple-700 uppercase tracking-wider font-bold block">
-                ADMINISTRATIVE DIVISION
-              </label>
+            {/* Continent Filter Bar */}
+            <div className="p-4 rounded-2xl bg-white border border-purple-100 shadow-xs space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] font-mono text-purple-700 uppercase tracking-wider font-bold block">
+                  CONTINENT SELECTION
+                </label>
+                <span className="text-[10px] font-mono text-slate-400 font-bold">
+                  {filteredCountries.length} countries
+                </span>
+              </div>
+
               <div className="flex flex-wrap gap-1.5">
-                <button
-                  onClick={() => setSelectedDivisionId('all')}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
-                    selectedDivisionId === 'all'
-                      ? 'bg-purple-600 text-white font-bold'
-                      : 'bg-purple-50 text-slate-700 hover:bg-purple-100'
-                  }`}
-                >
-                  All (16+)
-                </button>
-                {BANGLADESH_DIVISIONS.map((div) => (
+                {['All', 'Asia', 'Europe', 'Africa', 'North America', 'South America', 'Oceania'].map((cont) => (
                   <button
-                    key={div.id}
-                    onClick={() => setSelectedDivisionId(div.id)}
+                    key={cont}
+                    onClick={() => setSelectedContinent(cont)}
                     className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
-                      selectedDivisionId === div.id
+                      selectedContinent === cont
                         ? 'bg-purple-600 text-white font-bold'
                         : 'bg-purple-50 text-slate-700 hover:bg-purple-100'
                     }`}
                   >
-                    {div.name.split(' ')[0]}
+                    {cont}
                   </button>
                 ))}
               </div>
+
+              {/* Country Search Bar */}
+              <div className="relative pt-1">
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-4" />
+                <input
+                  type="text"
+                  value={countrySearch}
+                  onChange={(e) => setCountrySearch(e.target.value)}
+                  placeholder="Filter country by name or code..."
+                  className="w-full pl-9 pr-3 py-1.5 rounded-xl border border-purple-100 bg-[#fafaff] text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-400 font-mono"
+                />
+              </div>
             </div>
 
-            {/* District Selection List */}
+            {/* Country Registry Selection List */}
             <div className="p-4 rounded-2xl bg-white border border-purple-100 shadow-xs space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-mono text-slate-500 uppercase tracking-wider font-bold">
-                  GEOGRAPHIC DISTRICTS ({filteredDistricts.length})
+                  AUTHORITATIVE COUNTRY REGISTRY
                 </span>
                 <span className="text-[10px] font-mono text-purple-700 font-bold">
-                  {selectedDistrict.isCoastal ? 'Coastal Polygon' : 'Inland Basin'}
+                  {activeCountry.code3} • {activeCountry.region}
                 </span>
               </div>
 
-              <div className="space-y-1.5 max-h-[360px] overflow-y-auto pr-1">
-                {filteredDistricts.map((d) => {
-                  const isCurrent = d.id === selectedDistrict.id;
+              <div className="space-y-1.5 max-h-[340px] overflow-y-auto pr-1">
+                {filteredCountries.map((c) => {
+                  const isCurrent = c.code === activeCountry.code;
                   return (
                     <button
-                      key={d.id}
-                      onClick={() => setSelectedDistrictId(d.id)}
+                      key={c.code}
+                      onClick={() => {
+                        setSelectedCountryCode(c.code);
+                        if (c.code !== 'BD') setIsDistrictMode(false);
+                      }}
                       className={`w-full p-2.5 rounded-xl border text-left transition-all flex items-center justify-between ${
                         isCurrent
                           ? 'bg-purple-900 border-purple-900 text-white shadow-xs'
@@ -260,31 +337,31 @@ export const InvestigatePage: React.FC<InvestigatePageProps> = ({ onNavigate }) 
                     >
                       <div className="min-w-0 pr-2">
                         <div className="text-xs font-extrabold flex items-center gap-1.5 font-['Space_Grotesk'] truncate">
-                          <span>{d.name}</span>
-                          {d.isCoastal && (
-                            <span
-                              className={`text-[9px] px-1.5 py-0.2 rounded font-mono shrink-0 ${
-                                isCurrent
-                                  ? 'bg-purple-800 text-purple-200 border border-purple-700'
-                                  : 'bg-purple-50 text-purple-700 border border-purple-200'
-                              }`}
-                            >
-                              COASTAL
-                            </span>
-                          )}
+                          <span>{c.name}</span>
+                          <span
+                            className={`text-[9px] px-1.5 py-0.2 rounded font-mono shrink-0 ${
+                              isCurrent
+                                ? 'bg-purple-800 text-purple-200 border border-purple-700'
+                                : 'bg-purple-50 text-purple-700 border border-purple-200'
+                            }`}
+                          >
+                            {c.code}
+                          </span>
                         </div>
                         <div className={`text-[10px] font-mono truncate ${isCurrent ? 'text-purple-200' : 'text-slate-500'}`}>
-                          {d.divisionName} Division • Elev {d.elevationMeters}m
+                          {c.region} • Cap: {c.capital}
                         </div>
                       </div>
 
                       <div className="text-right font-mono shrink-0">
                         <span className={`text-[11px] font-bold block ${isCurrent ? 'text-purple-200' : 'text-purple-700'}`}>
                           {selectedVariable === 'lst'
-                            ? `+${d.lstTrendPerDecade_C}°C`
+                            ? `+${c.trendLST}°C/dec`
                             : selectedVariable === 'rainfall'
-                            ? `${d.annualRainfall_mm}mm`
-                            : `${d.meanNDVI} NDVI`}
+                            ? `${c.trendRainfall}%/dec`
+                            : selectedVariable === 'ndvi'
+                            ? `${c.trendNDVI}%/dec`
+                            : `${c.trendTWS} cm/dec`}
                         </span>
                       </div>
                     </button>
@@ -292,6 +369,80 @@ export const InvestigatePage: React.FC<InvestigatePageProps> = ({ onNavigate }) 
                 })}
               </div>
             </div>
+
+            {/* Bangladesh Sub-District Toggle & Selector (if Bangladesh is active) */}
+            {activeCountry.code === 'BD' && (
+              <div className="p-4 rounded-2xl bg-purple-50/70 border border-purple-200 shadow-xs space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-purple-600 animate-pulse" />
+                    <span className="text-[11px] font-extrabold text-purple-950 font-['Space_Grotesk']">
+                      Bangladesh Sub-District Model
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setIsDistrictMode((prev) => !prev)}
+                    className={`px-3 py-1 rounded-xl text-xs font-mono font-bold transition-all ${
+                      isDistrictMode
+                        ? 'bg-purple-600 text-white'
+                        : 'bg-white text-purple-800 border border-purple-300 hover:bg-purple-100'
+                    }`}
+                  >
+                    {isDistrictMode ? 'Exit District View' : 'Explore 64 Districts'}
+                  </button>
+                </div>
+
+                {isDistrictMode && (
+                  <div className="space-y-3 pt-2">
+                    {/* Division selector */}
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-mono text-purple-800 font-bold">DIVISION:</span>
+                      <div className="flex flex-wrap gap-1">
+                        <button
+                          onClick={() => setSelectedDivisionId('all')}
+                          className={`px-2 py-0.5 rounded text-[11px] font-medium ${
+                            selectedDivisionId === 'all'
+                              ? 'bg-purple-700 text-white font-bold'
+                              : 'bg-white text-slate-700 border border-purple-200'
+                          }`}
+                        >
+                          All
+                        </button>
+                        {BANGLADESH_DIVISIONS.map((div) => (
+                          <button
+                            key={div.id}
+                            onClick={() => setSelectedDivisionId(div.id)}
+                            className={`px-2 py-0.5 rounded text-[11px] font-medium ${
+                              selectedDivisionId === div.id
+                                ? 'bg-purple-700 text-white font-bold'
+                                : 'bg-white text-slate-700 border border-purple-200'
+                            }`}
+                          >
+                            {div.name.split(' ')[0]}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* District selector dropdown */}
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-mono text-purple-800 font-bold">SELECT DISTRICT:</span>
+                      <select
+                        value={activeDistrict.id}
+                        onChange={(e) => setSelectedDistrictId(e.target.value)}
+                        className="w-full p-2 rounded-xl bg-white border border-purple-200 text-xs font-bold text-slate-800 focus:outline-none font-mono"
+                      >
+                        {filteredDistricts.map((d) => (
+                          <option key={d.id} value={d.id}>
+                            {d.name} ({d.divisionName}) • {d.isCoastal ? 'Coastal' : 'Inland'}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* NASA Provenance Summary Card */}
             <div className="p-4 rounded-2xl bg-white border border-purple-100 shadow-xs space-y-2 text-xs">
@@ -311,7 +462,11 @@ export const InvestigatePage: React.FC<InvestigatePageProps> = ({ onNavigate }) 
               <div className="text-[11px] font-mono text-slate-500 space-y-0.5">
                 <div>Agency: <strong className="text-slate-700">{activeDataset.source_agency}</strong></div>
                 <div>Product ID: <strong className="text-slate-700">{activeDataset.dataset_id}</strong></div>
-                <div>Resolution: <strong className="text-slate-700">{activeDataset.spatial_resolution}</strong></div>
+                <div>Spatial Resolution: <strong className="text-slate-700">{activeDataset.spatial_resolution}</strong></div>
+              </div>
+
+              <div className="p-2.5 rounded-xl bg-purple-50/70 border border-purple-200 text-[10px] font-mono text-purple-900 leading-tight">
+                Derived from NASA dataset using GlobTraceX spatial aggregation.
               </div>
 
               <button
@@ -323,20 +478,22 @@ export const InvestigatePage: React.FC<InvestigatePageProps> = ({ onNavigate }) 
             </div>
           </div>
 
-          {/* Center & Right Column: Large Geographic Visualization, Evidence & Chart (8 cols) */}
+          {/* Center & Right Column: Interactive 3D EarthExplorer, Chart, and Scientific Evidence (8 cols) */}
           <div className="lg:col-span-8 space-y-6 min-w-0">
-            {/* Unified Geographic Engine: EarthExplorer */}
+            {/* Unified 3D Global Earth Instrument */}
             <EarthExplorer
-              initialLevel="bangladesh"
-              selectedDistrictId={selectedDistrict.id}
+              initialLevel={isDistrictMode ? 'district' : 'country'}
+              selectedCountryCode={activeCountry.code}
+              onSelectCountry={(code) => setSelectedCountryCode(code)}
+              selectedDistrictId={activeDistrict.id}
               onSelectDistrict={(id) => setSelectedDistrictId(id)}
               activeVariable={selectedVariable}
               dataset={activeDataset}
-              heightClass="h-[480px] sm:h-[540px] lg:h-[580px]"
+              heightClass="h-[460px] sm:h-[520px] lg:h-[560px]"
               showInvestigationAction={false}
             />
 
-            {/* Scientific Evidence Card: The Four Questions Results */}
+            {/* Scientific Evidence Card: The Four Core Questions Results */}
             <div className="p-5 sm:p-6 rounded-2xl bg-white border border-purple-100 shadow-sm space-y-5 min-w-0">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-purple-100 pb-4">
                 <div className="min-w-0">
@@ -344,7 +501,7 @@ export const InvestigatePage: React.FC<InvestigatePageProps> = ({ onNavigate }) 
                     DETERMINISTIC STATISTICAL ASSESSMENT
                   </span>
                   <h3 className="text-lg font-black text-slate-900 mt-0.5 font-['Space_Grotesk'] truncate">
-                    {selectedDistrict.name} • {scientificResult.variableName}
+                    {isDistrictMode ? activeDistrict.name : activeCountry.name} • {scientificResult.variableName}
                   </h3>
                 </div>
 
@@ -392,87 +549,76 @@ export const InvestigatePage: React.FC<InvestigatePageProps> = ({ onNavigate }) 
                 </div>
 
                 <div className="p-3.5 rounded-xl bg-[#fafaff] border border-purple-100 min-w-0">
-                  <span className="text-[10px] text-slate-400 block font-sans truncate">VALID OBSERVATIONS</span>
+                  <span className="text-[10px] text-slate-400 block font-sans truncate">DATA COVERAGE</span>
                   <span className="text-sm font-black text-purple-900 block mt-0.5 truncate">
                     {scientificResult.observations.validCount} / {scientificResult.observations.totalExpected} ({scientificResult.observations.coveragePct}%)
                   </span>
                 </div>
               </div>
 
-              {/* Four Scientific Questions Summary Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-2 text-xs">
-                <div className="p-4 rounded-xl bg-purple-50/60 border border-purple-100 space-y-1.5 min-w-0">
-                  <span className="text-[10px] font-mono text-purple-700 font-bold uppercase block">
-                    1. WHAT IS CHANGING?
-                  </span>
-                  <div className="font-extrabold text-slate-900 font-['Space_Grotesk']">
-                    {scientificResult.variableName} ({scientificResult.units})
-                  </div>
-                  <p className="text-slate-600 text-[11px] leading-relaxed">
-                    Observed trajectory: <strong>{scientificResult.trend.direction.toUpperCase()}</strong> with a total cumulative shift of{' '}
-                    <strong>{scientificResult.magnitude.totalCumulativeChange > 0 ? '+' : ''}{scientificResult.magnitude.totalCumulativeChange} {scientificResult.units}</strong> over the analysis period.
-                  </p>
+              {/* The Seven Core Scientific Questions Answered Directly */}
+              <div className="p-4 rounded-xl bg-purple-50/50 border border-purple-100 space-y-2.5 text-xs">
+                <div className="font-extrabold text-purple-900 font-['Space_Grotesk'] text-sm">
+                  The Planetary Trend Questions Answered:
                 </div>
-
-                <div className="p-4 rounded-xl bg-purple-50/60 border border-purple-100 space-y-1.5 min-w-0">
-                  <span className="text-[10px] font-mono text-purple-700 font-bold uppercase block">
-                    2. WHERE IS IT CHANGING?
-                  </span>
-                  <div className="font-extrabold text-slate-900 font-['Space_Grotesk']">
-                    {selectedDistrict.name} District, {selectedDistrict.divisionName} Division
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-slate-700">
+                  <div>
+                    <strong className="text-purple-900">1. What is changing?</strong> {scientificResult.variableName} ({scientificResult.units})
                   </div>
-                  <p className="text-slate-600 text-[11px] leading-relaxed">
-                    Coordinates: {selectedDistrict.coordinates[1]}°N, {selectedDistrict.coordinates[0]}°E. Elevation: {selectedDistrict.elevationMeters}m MSL.
-                  </p>
-                </div>
-
-                <div className="p-4 rounded-xl bg-purple-50/60 border border-purple-100 space-y-1.5 min-w-0">
-                  <span className="text-[10px] font-mono text-purple-700 font-bold uppercase block">
-                    3. HOW MUCH IS IT CHANGING?
-                  </span>
-                  <div className="font-extrabold text-slate-900 font-['Space_Grotesk']">
-                    {scientificResult.slope.valuePerDecade > 0 ? '+' : ''}{scientificResult.slope.valuePerDecade} {scientificResult.slope.unit}
+                  <div>
+                    <strong className="text-purple-900">2. Where?</strong> {isDistrictMode ? `${activeDistrict.name} District, Bangladesh` : `${activeCountry.name} (${activeCountry.coordinates[1]}°N, ${activeCountry.coordinates[0]}°E)`}
                   </div>
-                  <p className="text-slate-600 text-[11px] leading-relaxed">
-                    The non-parametric median rate establishes a decadal trend of {scientificResult.slope.valuePerDecade} {scientificResult.units}/decade.
-                  </p>
-                </div>
-
-                <div className="p-4 rounded-xl bg-purple-50/60 border border-purple-100 space-y-1.5 min-w-0">
-                  <span className="text-[10px] font-mono text-purple-700 font-bold uppercase block">
-                    4. IS THE CHANGE SIGNIFICANT?
-                  </span>
-                  <div className="font-extrabold text-slate-900 font-['Space_Grotesk']">
-                    {scientificResult.trend.significant ? 'Statistically Significant (p < 0.05)' : 'Not Distinguishable from Random Variability'}
+                  <div>
+                    <strong className="text-purple-900">3. How much?</strong> {scientificResult.slope.valuePerDecade > 0 ? '+' : ''}{scientificResult.slope.valuePerDecade} {scientificResult.slope.unit} ({scientificResult.magnitude.totalCumulativeChange > 0 ? '+' : ''}{scientificResult.magnitude.totalCumulativeChange} {scientificResult.units} cumulative change)
                   </div>
-                  <p className="text-slate-600 text-[11px] leading-relaxed">
-                    Mann-Kendall test yields standardized Z = {scientificResult.trend.mannKendallZ} and two-tailed p = {scientificResult.trend.p_value}.
-                  </p>
+                  <div>
+                    <strong className="text-purple-900">4. How strong?</strong> Mann-Kendall S = {scientificResult.trend.mannKendallS}, Z = {scientificResult.trend.mannKendallZ} (p {scientificResult.trend.p_value < 0.001 ? '< 0.001' : `= ${scientificResult.trend.p_value}`})
+                  </div>
+                  <div>
+                    <strong className="text-purple-900">5. How consistent?</strong> {scientificResult.trendStability.stabilityCategory}: {scientificResult.trendStability.summaryDescription}
+                  </div>
+                  <div>
+                    <strong className="text-purple-900">6. Provenance?</strong> {scientificResult.provenance.dataset_name} ({scientificResult.provenance.dataset_id}) via {scientificResult.provenance.source_agency}
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Time-Series Chart Component */}
-            <GlobTraceChart
-              observations={observations}
-              result={scientificResult}
-              useAnomalies={useAnomalies}
-              onToggleAnomaly={() => setUseAnomalies(!useAnomalies)}
-            />
+            {/* Scientific Chart: 26-Year Observation Record & Theil-Sen Line */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between px-1">
+                <h4 className="text-sm font-extrabold text-slate-900 font-['Space_Grotesk']">
+                  26-Year Continuous Observation Time Series (2000–2026)
+                </h4>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-mono text-slate-400">
+                    {useAnomalies ? 'Climatological Anomalies Displayed' : 'Raw Instrument Values'}
+                  </span>
+                </div>
+              </div>
 
-            {/* Trend Fingerprint & Trend Signal Index (TSI) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Trend Fingerprint Card */}
+              <GlobTraceChart
+                observations={observations}
+                result={scientificResult}
+                useAnomalies={useAnomalies}
+                onToggleAnomaly={() => setUseAnomalies((prev) => !prev)}
+                height={320}
+              />
+            </div>
+
+            {/* Sub-Period Stability & Multi-Sensor Earth Change Fingerprint */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Multi-Sensor Co-occurring Fingerprint */}
               <div className="p-5 rounded-2xl bg-white border border-purple-100 shadow-sm space-y-3 min-w-0">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-mono text-purple-700 font-bold uppercase">
-                    MULTI-SIGNAL TREND FINGERPRINT
+                    MULTI-SENSOR SIGNATURE
                   </span>
-                  <span className="text-[10px] font-mono text-slate-400">4 Independent NASA Observables</span>
+                  <span className="text-[10px] font-mono text-slate-400">5 NASA Observables</span>
                 </div>
 
                 <h4 className="text-sm font-extrabold text-slate-900 font-['Space_Grotesk']">
-                  Co-occurring Signals for {selectedDistrict.name}
+                  Co-occurring Signals for {isDistrictMode ? activeDistrict.name : activeCountry.name}
                 </h4>
 
                 <div className="space-y-2 text-xs font-mono">
@@ -508,28 +654,32 @@ export const InvestigatePage: React.FC<InvestigatePageProps> = ({ onNavigate }) 
                 </div>
               </div>
 
-              {/* Trend Signal Index (TSI) with Mandated Scientific Disclaimer */}
+              {/* Trend Stability Diagnosis */}
               <div className="p-5 rounded-2xl bg-white border border-purple-100 shadow-sm space-y-3 flex flex-col justify-between min-w-0">
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] font-mono text-purple-700 font-bold uppercase">
-                      ANALYTICAL COMPOSITE INDEX
+                      TEMPORAL STABILITY DECOMPOSITION
                     </span>
                     <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200 font-bold">
-                      {scientificResult.trendSignalIndex.label}
+                      {scientificResult.trendStability.stabilityCategory}
                     </span>
                   </div>
 
-                  <h4 className="text-sm font-extrabold text-slate-900 font-['Space_Grotesk']">
-                    Trend Signal Index (TSI): <span className="text-purple-700 font-mono text-base font-black">{scientificResult.trendSignalIndex.score > 0 ? '+' : ''}{scientificResult.trendSignalIndex.score}</span>
-                  </h4>
-
-                  <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden flex">
-                    <div
-                      className="bg-purple-600 h-full rounded-full transition-all duration-500"
-                      style={{ width: `${Math.min(100, Math.max(10, ((scientificResult.trendSignalIndex.score + 1) / 2) * 100))}%` }}
-                    />
+                  <div className="space-y-2 text-xs font-mono">
+                    {scientificResult.trendStability.subPeriods.map((sp) => (
+                      <div key={sp.periodName} className="p-2 rounded-lg bg-[#fafaff] border border-purple-100 flex justify-between items-center text-[11px]">
+                        <span className="text-slate-600">{sp.periodName}:</span>
+                        <span className="font-bold text-purple-900">
+                          {sp.slopePerDecade > 0 ? '+' : ''}{sp.slopePerDecade} {scientificResult.units}/dec (p={sp.p_value})
+                        </span>
+                      </div>
+                    ))}
                   </div>
+
+                  <p className="text-xs text-slate-600 leading-relaxed font-sans">
+                    {scientificResult.trendStability.summaryDescription}
+                  </p>
                 </div>
 
                 {/* Mandated Scientific Disclaimer Box */}

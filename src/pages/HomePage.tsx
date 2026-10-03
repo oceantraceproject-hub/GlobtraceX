@@ -48,7 +48,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
       tag: t('questions.q2.tag'),
       icon: Layers,
       implementation:
-        'Hierarchical geographic resolution from planetary Earth to Bangladesh divisions down to 64 district-level administrative boundary polygons with real coordinates.',
+        'Hierarchical geographic resolution from planetary Earth to global continents, nations, and sub-national administrative boundary polygons with real georeferenced coordinates.',
     },
     {
       id: 2,
@@ -311,34 +311,42 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
         </div>
       </section>
 
-      {/* Featured Demonstration: Bangladesh Earth System Case Study */}
+      {/* Global & Regional Scientific Scope */}
       <section className="py-14 bg-gradient-to-r from-purple-900 via-indigo-950 to-purple-950 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="space-y-2 max-w-2xl">
             <div className="flex items-center gap-2 text-xs font-mono font-semibold tracking-wider text-purple-300">
               <span className="px-2 py-0.5 rounded bg-purple-500/20 border border-purple-400/30">
-                DEMONSTRATION CASE STUDY
+                SCIENTIFIC SCOPE
               </span>
-              <span>BANGLADESH GIS DISTRICT LAB</span>
+              <span>FROM GLOBAL TO SUB-NATIONAL OBSERVATIONS</span>
             </div>
 
             <h3 className="text-2xl font-extrabold tracking-tight text-white font-['Space_Grotesk']">
-              Investigate Bangladesh District-Level Earth System Signals
+              Every trend has a direction. Every result has a source.
             </h3>
 
-            <p className="text-xs sm:text-sm text-purple-200/90 leading-relaxed">
-              Explore 64 georeferenced administrative districts with authentic GIS boundaries. Compute Theil-Sen slopes and Mann-Kendall significance for Land Surface Temperature, GPM IMERG Precipitation, and GRACE Terrestrial Water Storage.
+            <p className="text-xs sm:text-sm text-purple-200/90 leading-relaxed font-sans">
+              Investigate 74 sovereign countries and 64 high-resolution Bangladesh district boundaries. Evaluate Theil-Sen median slopes, 95% confidence intervals, and Mann-Kendall significance across Land Surface Temperature, GPM Precipitation, MODIS Vegetation vitality, and GRACE Water Storage.
             </p>
           </div>
 
-          <button
-            onClick={() => onNavigate('/investigate')}
-            className="shrink-0 px-6 py-3.5 rounded-xl bg-white hover:bg-purple-50 text-purple-900 font-['Space_Grotesk'] font-bold text-xs shadow-lg transition-all flex items-center gap-2 active:scale-95"
-          >
-            <Compass className="w-4 h-4 text-purple-700" />
-            <span>Open Investigation Lab</span>
-            <ArrowRight className="w-4 h-4 text-purple-700" />
-          </button>
+          <div className="flex flex-wrap items-center gap-3 shrink-0">
+            <button
+              onClick={() => onNavigate('/investigate')}
+              className="px-6 py-3.5 rounded-xl bg-white hover:bg-purple-50 text-purple-900 font-['Space_Grotesk'] font-bold text-xs shadow-lg transition-all flex items-center gap-2 active:scale-95"
+            >
+              <Compass className="w-4 h-4 text-purple-700" />
+              <span>Launch Investigation</span>
+              <ArrowRight className="w-4 h-4 text-purple-700" />
+            </button>
+            <button
+              onClick={() => onNavigate('/team')}
+              className="px-5 py-3.5 rounded-xl bg-purple-800/80 hover:bg-purple-700 text-purple-100 font-['Space_Grotesk'] font-bold text-xs border border-purple-500/40 transition-all flex items-center gap-2"
+            >
+              <span>Meet Team Protichamp</span>
+            </button>
+          </div>
         </div>
       </section>
     </div>

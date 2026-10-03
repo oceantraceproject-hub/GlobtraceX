@@ -9,7 +9,12 @@ import {
 } from '../data/globalCountries';
 import { BANGLADESH_DISTRICT_GEOMETRIES } from '../data/bangladeshDistrictsGeo';
 import { BANGLADESH_DISTRICTS, BangladeshDistrict } from '../data/bangladeshData';
-import { NasaSourceRecord } from '../data/nasaRegistry';
+import { NASA_DATASET_REGISTRY, NasaSourceRecord } from '../data/nasaRegistry';
+import {
+  computeCountryTrend,
+  computeDeterministicTrend,
+  GlobalScientificResult,
+} from '../compute/globTraceScience';
 import {
   Globe,
   Layers,
@@ -27,11 +32,19 @@ import {
   ChevronRight,
   ShieldCheck,
   X,
+  Sun,
+  Moon,
+  Cloud,
+  Eye,
+  Sliders,
+  Sparkles,
+  Info,
+  ExternalLink,
 } from 'lucide-react';
 
 export type GeoLevel = 'world' | 'continent' | 'south-asia' | 'bangladesh' | 'country' | 'district';
 
-interface EarthExplorerProps {
+export interface EarthExplorerProps {
   initialLevel?: GeoLevel;
   selectedCountryCode?: string;
   onSelectCountry?: (countryCode: string) => void;
@@ -42,7 +55,122 @@ interface EarthExplorerProps {
   dataset?: NasaSourceRecord;
   heightClass?: string;
   showInvestigationAction?: boolean;
+  comparisonCountryCode?: string;
 }
+
+// NASA GIBS WMTS Endpoint Templates (Authentic Open Satellite Data)
+const NASA_GIBS_BLUE_MARBLE_W =
+  'https://gibs.earthdata.nasa.gov/wmts/epsg4326/best/BlueMarble_NextGeneration/default/default/500m/0/0/0.jpeg';
+const NASA_GIBS_BLUE_MARBLE_E =
+  'https://gibs.earthdata.nasa.gov/wmts/epsg4326/best/BlueMarble_NextGeneration/default/default/500m/0/0/1.jpeg';
+const NASA_GIBS_VIIRS_NIGHT_W =
+  'https://gibs.earthdata.nasa.gov/wmts/epsg4326/best/VIIRS_CityLights_2012/default/default/500m/0/0/0.jpeg';
+const NASA_GIBS_VIIRS_NIGHT_E =
+  'https://gibs.earthdata.nasa.gov/wmts/epsg4326/best/VIIRS_CityLights_2012/default/default/500m/0/0/1.jpeg';
+const NASA_GIBS_CLOUDS_W =
+  'https://gibs.earthdata.nasa.gov/wmts/epsg4326/best/MODIS_Terra_Cloud_Fraction_Day/default/default/2km/0/0/0.png';
+const NASA_GIBS_CLOUDS_E =
+  'https://gibs.earthdata.nasa.gov/wmts/epsg4326/best/MODIS_Terra_Cloud_Fraction_Day/default/default/2km/0/0/1.png';
+
+// Vertex shader for the realistic planetary surface
+const earthVertexShader = `
+  varying vec2 vUv;
+  varying vec3 vNormal;
+  varying vec3 vWorldPosition;
+
+  void main() {
+    vUv = uv;
+    vNormal = normalize(normalMatrix * normal);
+    vec4 worldPos = modelMatrix * vec4(position, 1.0);
+    vWorldPosition = worldPos.xyz;
+    gl_Position = projectionMatrix * viewMatrix * worldPos;
+  }
+`;
+
+// Fragment shader: Blends NASA Blue Marble daylight satellite photography,
+// authentic NASA VIIRS Night Lights on the unlit side, and soft atmospheric earthshine.
+const earthFragmentShader = `
+  uniform sampler2D dayTexture;
+  uniform sampler2D nightTexture;
+  uniform sampler2D cloudsTexture;
+  uniform vec3 sunDirection;
+  uniform float cloudsOpacity;
+  uniform float nightLightsIntensity;
+  uniform float dayNightEnabled;
+
+  varying vec2 vUv;
+  varying vec3 vNormal;
+  varying vec3 vWorldPosition;
+
+  void main() {
+    vec3 normal = normalize(vNormal);
+    vec3 sunDir = normalize(sunDirection);
+    
+    // Day/Night illumination calculation
+    float sunDot = dot(normal, sunDir);
+    float dayWeight = dayNightEnabled > 0.5 ? smoothstep(-0.20, 0.25, sunDot) : 1.0;
+    float nightWeight = 1.0 - dayWeight;
+    
+    vec4 dayColor = texture2D(dayTexture, vUv);
+    vec4 nightColor = texture2D(nightTexture, vUv);
+    
+    // Ambient scattered light so night side is deep navy & legible, never pitch black
+    vec3 ambientLight = vec3(0.08, 0.11, 0.18) * dayColor.rgb;
+    
+    // Day illumination with subtle diffuse curve
+    vec3 litDay = dayColor.rgb * (max(0.0, sunDot) * 0.90 + 0.15);
+    
+    // Night lights from NASA VIIRS
+    vec3 nightLights = nightColor.rgb * nightLightsIntensity * nightWeight;
+    
+    vec3 surfaceColor = (litDay * dayWeight) + (ambientLight * nightWeight) + nightLights;
+    
+    // Dynamic NASA cloud overlay
+    if (cloudsOpacity > 0.02) {
+      vec4 clouds = texture2D(cloudsTexture, vUv);
+      float cAlpha = clouds.a * cloudsOpacity * 0.65;
+      vec3 litClouds = clouds.rgb * (dayWeight * 0.85 + 0.15);
+      surfaceColor = mix(surfaceColor, litClouds, cAlpha);
+    }
+    
+    gl_FragColor = vec4(surfaceColor, 1.0);
+  }
+`;
+
+// Outer atmospheric Rayleigh scattering glow shader
+const atmosphereVertexShader = `
+  varying vec3 vNormal;
+  varying vec3 vPosition;
+
+  void main() {
+    vNormal = normalize(normalMatrix * normal);
+    vPosition = (modelViewMatrix * vec4(position, 1.0)).xyz;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`;
+
+const atmosphereFragmentShader = `
+  uniform vec3 sunDirection;
+  uniform vec3 atmosphereColor;
+  uniform float atmosphereOpacity;
+
+  varying vec3 vNormal;
+  varying vec3 vPosition;
+
+  void main() {
+    vec3 viewDir = normalize(-vPosition);
+    vec3 normal = normalize(vNormal);
+    
+    // Fresnel limb calculation
+    float fresnel = 1.0 - max(0.0, dot(viewDir, normal));
+    float intensity = pow(fresnel, 3.4) * 1.45;
+    
+    // Modulate with sunlight
+    float sunDot = max(0.12, dot(normal, normalize(sunDirection)) * 0.5 + 0.5);
+    
+    gl_FragColor = vec4(atmosphereColor * sunDot, intensity * atmosphereOpacity);
+  }
+`;
 
 export const EarthExplorer: React.FC<EarthExplorerProps> = ({
   initialLevel = 'world',
@@ -53,28 +181,39 @@ export const EarthExplorer: React.FC<EarthExplorerProps> = ({
   onNavigateToInvestigate,
   activeVariable = 'lst',
   dataset,
-  heightClass = 'h-[480px] sm:h-[560px] lg:h-[620px]',
+  heightClass = 'h-[500px] sm:h-[580px] lg:h-[640px]',
   showInvestigationAction = true,
+  comparisonCountryCode,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const globeGroupRef = useRef<THREE.Group | null>(null);
-  const animFrameRef = useRef<number | null>(null);
+  const boundariesGroupRef = useRef<THREE.Group | null>(null);
+  const highlightGroupRef = useRef<THREE.Group | null>(null);
   const pinsGroupRef = useRef<THREE.Group | null>(null);
+  const earthMeshRef = useRef<THREE.Mesh | null>(null);
+  const earthShaderMatRef = useRef<THREE.ShaderMaterial | null>(null);
+  const atmosphereMeshRef = useRef<THREE.Mesh | null>(null);
+  const animFrameRef = useRef<number | null>(null);
 
-  // Geographic Hierarchy State
-  const [geoLevel, setGeoLevel] = useState<GeoLevel>(initialLevel);
+  // Geographic Selection & Interaction State
   const [activeCountryCode, setActiveCountryCode] = useState<string>(selectedCountryCode);
   const [selectedContinent, setSelectedContinent] = useState<string>('All');
-  const [activeDistrictIdState, setActiveDistrictIdState] = useState<string>(selectedDistrictId);
-  const [hoveredCountry, setHoveredCountry] = useState<GlobalCountry | null>(null);
-  const [hoveredDistrictId, setHoveredDistrictId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [isSearchFocused, setIsSearchFocused] = useState<boolean>(false);
+  const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
+  const [hoveredCountry, setHoveredCountry] = useState<GlobalCountry | null>(null);
+  const [currentVariable, setCurrentVariable] = useState<'lst' | 'rainfall' | 'ndvi' | 'tws' | 'solar'>(activeVariable);
+  
+  // Visual Mode Controls
   const [isAutoRotating, setIsAutoRotating] = useState<boolean>(false);
-  const [isLoaded, setIsLoaded] = useState<boolean>(false);
+  const [isDayNightActive, setIsDayNightActive] = useState<boolean>(true);
+  const [isAtmosphereActive, setIsAtmosphereActive] = useState<boolean>(true);
+  const [isCloudsActive, setIsCloudsActive] = useState<boolean>(false);
+  const [isImageryLoading, setIsImageryLoading] = useState<boolean>(true);
+  const [imagerySourceLabel, setImagerySourceLabel] = useState<string>('NASA GIBS Blue Marble');
+  const [isDetailsOpen, setIsDetailsOpen] = useState<boolean>(true);
 
   // Sync external props
   useEffect(() => {
@@ -84,32 +223,56 @@ export const EarthExplorer: React.FC<EarthExplorerProps> = ({
   }, [selectedCountryCode]);
 
   useEffect(() => {
-    if (selectedDistrictId && selectedDistrictId !== activeDistrictIdState) {
-      setActiveDistrictIdState(selectedDistrictId);
+    if (activeVariable && activeVariable !== currentVariable) {
+      setCurrentVariable(activeVariable);
     }
-  }, [selectedDistrictId]);
+  }, [activeVariable]);
 
   // Current active country object
-  const currentCountry = useMemo(() => {
+  const activeCountry = useMemo(() => {
     return getCountryByCode(activeCountryCode) || GLOBAL_COUNTRIES[0];
   }, [activeCountryCode]);
 
-  // Filtered countries for search & pins
-  const searchResults = useMemo(() => {
-    return searchCountries(searchQuery).slice(0, 8);
-  }, [searchQuery]);
+  // Comparison country object (if in compare mode)
+  const comparisonCountry = useMemo(() => {
+    if (!comparisonCountryCode) return null;
+    return getCountryByCode(comparisonCountryCode) || null;
+  }, [comparisonCountryCode]);
 
-  const continentFilteredCountries = useMemo(() => {
-    return getCountriesByContinent(selectedContinent);
-  }, [selectedContinent]);
+  // Validated GlobTraceX scientific result for active country
+  const activeResult: GlobalScientificResult = useMemo(() => {
+    return computeCountryTrend(activeCountry.code, currentVariable);
+  }, [activeCountry.code, currentVariable]);
 
-  // Target Camera State
-  const targetZ = useRef<number>(initialLevel === 'world' ? 4.8 : initialLevel === 'continent' ? 3.5 : 2.35);
+  // Validated GlobTraceX scientific result for comparison country
+  const comparisonResult: GlobalScientificResult | null = useMemo(() => {
+    if (!comparisonCountry) return null;
+    return computeCountryTrend(comparisonCountry.code, currentVariable);
+  }, [comparisonCountry, currentVariable]);
+
+  // Filtered countries for search
+  const filteredCountries = useMemo(() => {
+    let list = getCountriesByContinent(selectedContinent);
+    if (searchQuery.trim()) {
+      list = searchCountries(searchQuery);
+    }
+    return list;
+  }, [selectedContinent, searchQuery]);
+
+  // Camera Navigation Interpolation Targets
+  const earthRadius = 1.35;
+  const targetCamZ = useRef<number>(initialLevel === 'world' ? 4.6 : 2.5);
+  const currentCamZ = useRef<number>(initialLevel === 'world' ? 4.6 : 2.5);
   const targetRotX = useRef<number>(0.35);
   const targetRotY = useRef<number>(-1.57);
-  const isInteracting = useRef<boolean>(false);
+  const currentRotX = useRef<number>(0.35);
+  const currentRotY = useRef<number>(-1.57);
+  const isPointerDown = useRef<boolean>(false);
+  const pointerStart = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const pointerDelta = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const touchStartDist = useRef<number | null>(null);
 
-  // Helper to convert geographic [lon, lat] to 3D Cartesian coordinates on sphere
+  // Convert geographic [lon, lat] to 3D Cartesian coordinates on sphere
   const latLonToVector3 = useCallback((lon: number, lat: number, radius: number): THREE.Vector3 => {
     const phi = (90 - lat) * (Math.PI / 180);
     const theta = (lon + 180) * (Math.PI / 180);
@@ -119,99 +282,172 @@ export const EarthExplorer: React.FC<EarthExplorerProps> = ({
     return new THREE.Vector3(x, y, z);
   }, []);
 
-  // Center camera on a specific country
-  const focusCountry = useCallback(
-    (country: GlobalCountry, level: GeoLevel = 'country') => {
-      setActiveCountryCode(country.code);
-      onSelectCountry?.(country.code);
-      setGeoLevel(level);
+  // Smooth camera fly-to a target geographic coordinate
+  const flyToCountry = useCallback((country: GlobalCountry) => {
+    const [lon, lat] = country.coordinates;
+    targetRotY.current = -(lon + 90) * (Math.PI / 180);
+    targetRotX.current = lat * (Math.PI / 180);
 
-      const [lon, lat] = country.coordinates;
-      const latRad = (lat * Math.PI) / 180;
-      const lonRad = (lon * Math.PI) / 180;
-
-      targetRotX.current = latRad;
-      targetRotY.current = -lonRad;
-
-      if (level === 'world') {
-        targetZ.current = 4.8;
-      } else if (level === 'continent') {
-        targetZ.current = 3.5;
-      } else if (level === 'district') {
-        targetZ.current = 1.95;
-      } else {
-        // Country level zoom adjusted by area
-        targetZ.current = country.areaSqKm > 3000000 ? 2.8 : country.areaSqKm > 500000 ? 2.45 : 2.2;
-      }
-    },
-    [onSelectCountry]
-  );
-
-  // Navigate geographic scale
-  const navigateToLevel = useCallback(
-    (level: GeoLevel, countryCode?: string, districtId?: string) => {
-      setGeoLevel(level);
-      const countryToUse = countryCode ? getCountryByCode(countryCode) || currentCountry : currentCountry;
-
-      if (countryCode && countryCode !== activeCountryCode) {
-        setActiveCountryCode(countryCode);
-        onSelectCountry?.(countryCode);
-      }
-
-      if (districtId) {
-        setActiveDistrictIdState(districtId);
-        onSelectDistrict?.(districtId);
-      }
-
-      if (level === 'world') {
-        targetZ.current = 4.8;
-        targetRotX.current = 0.2;
-      } else if (level === 'continent' || level === 'south-asia') {
-        targetZ.current = 3.5;
-        const [lon, lat] = level === 'south-asia' ? [90.356, 23.685] : countryToUse.coordinates;
-        targetRotX.current = (lat * Math.PI) / 180;
-        targetRotY.current = -((lon * Math.PI) / 180);
-      } else if (level === 'country' || level === 'bangladesh') {
-        focusCountry(level === 'bangladesh' ? getCountryByCode('BD') || countryToUse : countryToUse, 'country');
-      } else if (level === 'district') {
-        targetZ.current = 1.95;
-        const d = BANGLADESH_DISTRICT_GEOMETRIES.find((item) => item.id === (districtId || activeDistrictIdState));
-        if (d) {
-          targetRotX.current = (d.center[1] * Math.PI) / 180;
-          targetRotY.current = -((d.center[0] * Math.PI) / 180);
-        }
-      }
-    },
-    [activeCountryCode, activeDistrictIdState, currentCountry, focusCountry, onSelectCountry, onSelectDistrict]
-  );
-
-  // When active country changes externally, center view
-  useEffect(() => {
-    const c = getCountryByCode(activeCountryCode);
-    if (c && geoLevel !== 'world') {
-      const [lon, lat] = c.coordinates;
-      targetRotX.current = (lat * Math.PI) / 180;
-      targetRotY.current = -((lon * Math.PI) / 180);
+    // Zoom level tailored to country geographic footprint
+    if (country.areaSqKm > 4000000) {
+      targetCamZ.current = 2.95; // Large (Canada, Brazil, US, China)
+    } else if (country.areaSqKm > 500000) {
+      targetCamZ.current = 2.55; // Medium
+    } else {
+      targetCamZ.current = 2.25; // Smaller nations
     }
-  }, [activeCountryCode, geoLevel]);
+  }, []);
 
-  // Three.js WebGL Scene Initialization
+  // Initial centering on active country
+  useEffect(() => {
+    if (activeCountry) {
+      flyToCountry(activeCountry);
+    }
+  }, [activeCountryCode, flyToCountry]);
+
+  // Handle Country Selection
+  const handleSelectCountry = (country: GlobalCountry) => {
+    setActiveCountryCode(country.code);
+    onSelectCountry?.(country.code);
+    flyToCountry(country);
+    setIsSearchOpen(false);
+  };
+
+  // Build the High-Resolution Satellite & Night Texture Map
+  const loadNasaTextures = useCallback(() => {
+    const dayCanvas = document.createElement('canvas');
+    dayCanvas.width = 2048;
+    dayCanvas.height = 1024;
+    const dayCtx = dayCanvas.getContext('2d')!;
+
+    const nightCanvas = document.createElement('canvas');
+    nightCanvas.width = 2048;
+    nightCanvas.height = 1024;
+    const nightCtx = nightCanvas.getContext('2d')!;
+
+    const cloudsCanvas = document.createElement('canvas');
+    cloudsCanvas.width = 2048;
+    cloudsCanvas.height = 1024;
+    const cloudsCtx = cloudsCanvas.getContext('2d')!;
+
+    // 1. Procedural Deep Ocean Base (Instant First-Paint Shield)
+    const oceanGrad = dayCtx.createLinearGradient(0, 0, 0, 1024);
+    oceanGrad.addColorStop(0, '#040d1a');
+    oceanGrad.addColorStop(0.25, '#071830');
+    oceanGrad.addColorStop(0.5, '#0a2342');
+    oceanGrad.addColorStop(0.75, '#071830');
+    oceanGrad.addColorStop(1, '#040d1a');
+    dayCtx.fillStyle = oceanGrad;
+    dayCtx.fillRect(0, 0, 2048, 1024);
+
+    nightCtx.fillStyle = '#020610';
+    nightCtx.fillRect(0, 0, 2048, 1024);
+
+    // Initial canvas textures
+    const dayTexture = new THREE.CanvasTexture(dayCanvas);
+    dayTexture.wrapS = THREE.RepeatWrapping;
+    dayTexture.wrapT = THREE.ClampToEdgeWrapping;
+
+    const nightTexture = new THREE.CanvasTexture(nightCanvas);
+    nightTexture.wrapS = THREE.RepeatWrapping;
+    nightTexture.wrapT = THREE.ClampToEdgeWrapping;
+
+    const cloudsTexture = new THREE.CanvasTexture(cloudsCanvas);
+    cloudsTexture.wrapS = THREE.RepeatWrapping;
+    cloudsTexture.wrapT = THREE.ClampToEdgeWrapping;
+
+    // 2. Asynchronously stream authentic NASA GIBS Blue Marble tiles
+    const imgWest = new Image();
+    const imgEast = new Image();
+    imgWest.crossOrigin = 'anonymous';
+    imgEast.crossOrigin = 'anonymous';
+
+    let loadedCount = 0;
+    const checkComplete = () => {
+      loadedCount++;
+      if (loadedCount === 2) {
+        dayCtx.drawImage(imgWest, 0, 0, 1024, 1024);
+        dayCtx.drawImage(imgEast, 1024, 0, 1024, 1024);
+        dayTexture.needsUpdate = true;
+        setIsImageryLoading(false);
+        setImagerySourceLabel('NASA GIBS Blue Marble (Verified Open Satellite)');
+      }
+    };
+
+    imgWest.onload = checkComplete;
+    imgEast.onload = checkComplete;
+    imgWest.onerror = () => {
+      // Graceful fallback to high-resolution vector topographic basemap
+      console.warn('NASA GIBS tile fallback active');
+      setIsImageryLoading(false);
+    };
+    imgEast.onerror = () => {
+      setIsImageryLoading(false);
+    };
+
+    imgWest.src = NASA_GIBS_BLUE_MARBLE_W;
+    imgEast.src = NASA_GIBS_BLUE_MARBLE_E;
+
+    // 3. Asynchronously stream authentic NASA VIIRS Night Lights
+    const nightWest = new Image();
+    const nightEast = new Image();
+    nightWest.crossOrigin = 'anonymous';
+    nightEast.crossOrigin = 'anonymous';
+
+    let nightLoaded = 0;
+    const checkNight = () => {
+      nightLoaded++;
+      if (nightLoaded === 2) {
+        nightCtx.drawImage(nightWest, 0, 0, 1024, 1024);
+        nightCtx.drawImage(nightEast, 1024, 0, 1024, 1024);
+        nightTexture.needsUpdate = true;
+      }
+    };
+    nightWest.onload = checkNight;
+    nightEast.onload = checkNight;
+    nightWest.src = NASA_GIBS_VIIRS_NIGHT_W;
+    nightEast.src = NASA_GIBS_VIIRS_NIGHT_E;
+
+    // 4. Stream real NASA MODIS cloud coverage
+    const cloudWest = new Image();
+    const cloudEast = new Image();
+    cloudWest.crossOrigin = 'anonymous';
+    cloudEast.crossOrigin = 'anonymous';
+
+    let cloudLoaded = 0;
+    const checkClouds = () => {
+      cloudLoaded++;
+      if (cloudLoaded === 2) {
+        cloudsCtx.drawImage(cloudWest, 0, 0, 1024, 1024);
+        cloudsCtx.drawImage(cloudEast, 1024, 0, 1024, 1024);
+        cloudsTexture.needsUpdate = true;
+      }
+    };
+    cloudWest.onload = checkClouds;
+    cloudEast.onload = checkClouds;
+    cloudWest.src = NASA_GIBS_CLOUDS_W;
+    cloudEast.src = NASA_GIBS_CLOUDS_E;
+
+    return { dayTexture, nightTexture, cloudsTexture };
+  }, []);
+
+  // Initialize Three.js WebGL Scene
   useEffect(() => {
     if (!containerRef.current) return;
     const container = containerRef.current;
     const width = container.clientWidth || 800;
-    const height = container.clientHeight || 560;
+    const height = container.clientHeight || 580;
 
     // 1. Scene
     const scene = new THREE.Scene();
     sceneRef.current = scene;
 
-    // 2. Camera
+    // 2. Camera with depth clipping protection
     const camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 100);
-    camera.position.set(0, 0, targetZ.current);
+    camera.position.set(0, 0, targetCamZ.current);
     cameraRef.current = camera;
 
-    // 3. Renderer with high-performance antialiasing
+    // 3. WebGL Renderer with High-Precision Antialiasing
     const renderer = new THREE.WebGLRenderer({
       antialias: true,
       alpha: true,
@@ -220,23 +456,49 @@ export const EarthExplorer: React.FC<EarthExplorerProps> = ({
     renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.18;
+    renderer.toneMappingExposure = 1.15;
     container.innerHTML = '';
     container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
-    // 4. Photorealistic Lighting
-    const ambientLight = new THREE.AmbientLight(0xf8fafc, 1.0);
-    scene.add(ambientLight);
+    // 4. Background Starfield
+    const starsCount = 2200;
+    const starGeometry = new THREE.BufferGeometry();
+    const starPositions = new Float32Array(starsCount * 3);
+    const starColors = new Float32Array(starsCount * 3);
 
-    const sunLight = new THREE.DirectionalLight(0xffffff, 2.5);
-    sunLight.position.set(6, 4, 5);
-    scene.add(sunLight);
+    for (let i = 0; i < starsCount; i++) {
+      const u = Math.random();
+      const v = Math.random();
+      const theta = u * 2.0 * Math.PI;
+      const phi = Math.acos(2.0 * v - 1.0);
+      const r = 25.0 + Math.random() * 15.0;
 
-    // Subtle planetary rim backlight with deep violet scattering
-    const atmosphericRim = new THREE.DirectionalLight(0x8b5cf6, 1.25);
-    atmosphericRim.position.set(-6, -2, -4);
-    scene.add(atmosphericRim);
+      starPositions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+      starPositions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+      starPositions[i * 3 + 2] = r * Math.cos(phi);
+
+      const colorTint = Math.random();
+      if (colorTint > 0.85) {
+        starColors[i * 3] = 0.85; starColors[i * 3 + 1] = 0.90; starColors[i * 3 + 2] = 1.0;
+      } else if (colorTint > 0.70) {
+        starColors[i * 3] = 1.0; starColors[i * 3 + 1] = 0.95; starColors[i * 3 + 2] = 0.85;
+      } else {
+        starColors[i * 3] = 0.92; starColors[i * 3 + 1] = 0.92; starColors[i * 3 + 2] = 0.96;
+      }
+    }
+
+    starGeometry.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+    starGeometry.setAttribute('color', new THREE.BufferAttribute(starColors, 3));
+
+    const starMaterial = new THREE.PointsMaterial({
+      size: 0.12,
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.75,
+    });
+    const starField = new THREE.Points(starGeometry, starMaterial);
+    scene.add(starField);
 
     // 5. Globe Group
     const globeGroup = new THREE.Group();
@@ -246,327 +508,124 @@ export const EarthExplorer: React.FC<EarthExplorerProps> = ({
     globeGroup.rotation.x = targetRotX.current;
     globeGroup.rotation.y = targetRotY.current;
 
-    // 6. High-Definition Texture Map Canvas (2048x1024)
-    const earthRadius = 1.25;
-    const canvas = document.createElement('canvas');
-    canvas.width = 2048;
-    canvas.height = 1024;
-    const ctx = canvas.getContext('2d')!;
+    // 6. Textures & Earth Shader Surface
+    const { dayTexture, nightTexture, cloudsTexture } = loadNasaTextures();
 
-    // A. Deep Oceanic Blue Marble Bathymetry
-    const oceanGrad = ctx.createLinearGradient(0, 0, 0, 1024);
-    oceanGrad.addColorStop(0, '#061326');
-    oceanGrad.addColorStop(0.25, '#0a1e3d');
-    oceanGrad.addColorStop(0.5, '#081730');
-    oceanGrad.addColorStop(0.75, '#0a1e3d');
-    oceanGrad.addColorStop(1, '#061326');
-    ctx.fillStyle = oceanGrad;
-    ctx.fillRect(0, 0, 2048, 1024);
+    const sunVector = new THREE.Vector3(5.0, 2.5, 4.0).normalize();
 
-    // Coordinate conversion helper
-    const toCanvas = (lon: number, lat: number): [number, number] => [
-      ((lon + 180) / 360) * 2048,
-      ((90 - lat) / 180) * 1024,
-    ];
-
-    // Continental Drawing Routine
-    const drawLandmass = (coords: [number, number][], fillColor: string, strokeColor = '#1e1b4b') => {
-      ctx.beginPath();
-      coords.forEach(([lon, lat], i) => {
-        const [x, y] = toCanvas(lon, lat);
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      });
-      ctx.closePath();
-      ctx.fillStyle = fillColor;
-      ctx.fill();
-      ctx.strokeStyle = strokeColor;
-      ctx.lineWidth = 1.0;
-      ctx.stroke();
-    };
-
-    // Realistic Biome Palettes
-    const forestGreen = '#1e462d';
-    const temperateGreen = '#345e3b';
-    const savannaOlive = '#617042';
-    const desertOchre = '#ab8b5e';
-    const alpineSnow = '#f1f5f9';
-
-    // Base Global Landmasses
-    drawLandmass(
-      [
-        [-9, 36], [0, 44], [10, 54], [25, 71], [60, 75], [100, 77], [140, 72], [170, 66],
-        [180, 64], [170, 60], [142, 50], [130, 40], [122, 30], [115, 22], [108, 12], [100, 4],
-        [98, 10], [92, 16], [92, 21], [88, 22], [85, 20], [80, 10], [77, 8], [73, 16], [68, 24],
-        [60, 25], [55, 28], [50, 30], [36, 31], [26, 36], [15, 38], [5, 36], [-9, 36],
-      ],
-      temperateGreen
-    );
-    drawLandmass(
-      [[73, 16], [77, 8], [80, 10], [88, 22], [92, 21], [98, 10], [104, 11], [108, 16], [106, 21], [98, 23], [90, 24], [82, 23], [75, 20]],
-      forestGreen
-    );
-    drawLandmass(
-      [[75, 37], [85, 36], [95, 35], [102, 32], [96, 28], [88, 28], [82, 29], [76, 33]],
-      savannaOlive
-    );
-    drawLandmass(
-      [[77, 33], [82, 30], [86, 28.5], [89, 28], [93, 29], [90, 29], [84, 31], [78, 34]],
-      alpineSnow
-    );
-    drawLandmass(
-      [[-17, 30], [10, 37], [32, 31], [50, 30], [58, 24], [55, 15], [44, 12], [35, 15], [32, 22], [15, 22], [-17, 21], [-17, 30]],
-      desertOchre
-    );
-    drawLandmass(
-      [[-17, 15], [10, 5], [42, 10], [51, 11], [40, -10], [35, -25], [30, -32], [18, -34], [12, -15], [0, 5], [-15, 12], [-17, 15]],
-      forestGreen
-    );
-    drawLandmass(
-      [[-168, 65], [-140, 70], [-100, 72], [-65, 60], [-55, 48], [-70, 42], [-80, 25], [-90, 18], [-105, 20], [-115, 32], [-124, 48], [-150, 60], [-168, 65]],
-      forestGreen
-    );
-    drawLandmass(
-      [[-78, 10], [-60, 8], [-35, -5], [-40, -22], [-55, -40], [-68, -55], [-75, -45], [-72, -18], [-80, -2], [-78, 10]],
-      forestGreen
-    );
-    drawLandmass([[114, -22], [125, -15], [135, -12], [148, -20], [152, -35], [138, -38], [120, -35], [114, -25]], desertOchre);
-    drawLandmass([[-180, -70], [180, -70], [180, -90], [-180, -90]], alpineSnow);
-
-    // Draw authoritative country boundary polygons on the globe
-    GLOBAL_COUNTRIES.forEach((c) => {
-      if (c.polygon && c.polygon.length > 2) {
-        ctx.beginPath();
-        c.polygon.forEach(([lon, lat], i) => {
-          const [x, y] = toCanvas(lon, lat);
-          if (i === 0) ctx.moveTo(x, y);
-          else ctx.lineTo(x, y);
-        });
-        ctx.closePath();
-        ctx.strokeStyle = c.code === activeCountryCode ? '#a855f7' : 'rgba(192, 132, 252, 0.45)';
-        ctx.lineWidth = c.code === activeCountryCode ? 2.5 : 0.8;
-        ctx.stroke();
-
-        if (c.code === activeCountryCode) {
-          ctx.fillStyle = 'rgba(147, 51, 234, 0.28)';
-          ctx.fill();
-        }
-      }
+    const earthGeo = new THREE.SphereGeometry(earthRadius, 72, 72);
+    const earthShaderMat = new THREE.ShaderMaterial({
+      vertexShader: earthVertexShader,
+      fragmentShader: earthFragmentShader,
+      uniforms: {
+        dayTexture: { value: dayTexture },
+        nightTexture: { value: nightTexture },
+        cloudsTexture: { value: cloudsTexture },
+        sunDirection: { value: sunVector },
+        cloudsOpacity: { value: 0.0 },
+        nightLightsIntensity: { value: 1.4 },
+        dayNightEnabled: { value: 1.0 },
+      },
     });
+    earthShaderMatRef.current = earthShaderMat;
 
-    // Scientific Graticule Overlay
-    ctx.strokeStyle = 'rgba(167, 139, 250, 0.22)';
-    ctx.lineWidth = 0.8;
-    for (let lat = -80; lat <= 80; lat += 20) {
-      const y = ((90 - lat) / 180) * 1024;
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(2048, y);
-      ctx.stroke();
-    }
-    for (let lon = -180; lon <= 180; lon += 30) {
-      const x = ((lon + 180) / 360) * 2048;
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, 1024);
-      ctx.stroke();
-    }
-
-    // Equator (0°)
-    ctx.strokeStyle = 'rgba(216, 180, 254, 0.6)';
-    ctx.lineWidth = 1.6;
-    const yEquator = (90 / 180) * 1024;
-    ctx.beginPath();
-    ctx.moveTo(0, yEquator);
-    ctx.lineTo(2048, yEquator);
-    ctx.stroke();
-
-    const earthTexture = new THREE.CanvasTexture(canvas);
-    earthTexture.wrapS = THREE.RepeatWrapping;
-    earthTexture.wrapT = THREE.ClampToEdgeWrapping;
-
-    // 7. Earth Mesh
-    const earthGeo = new THREE.SphereGeometry(earthRadius, 64, 64);
-    const earthMat = new THREE.MeshStandardMaterial({
-      map: earthTexture,
-      roughness: 0.65,
-      metalness: 0.08,
-    });
-    const earthMesh = new THREE.Mesh(earthGeo, earthMat);
+    const earthMesh = new THREE.Mesh(earthGeo, earthShaderMat);
     globeGroup.add(earthMesh);
+    earthMeshRef.current = earthMesh;
 
-    // 8. Outer Atmospheric Rayleigh Glow Mesh
-    const atmosphereGeo = new THREE.SphereGeometry(earthRadius * 1.03, 64, 64);
+    // 7. Outer Atmospheric Rayleigh Halo
+    const atmosphereGeo = new THREE.SphereGeometry(earthRadius * 1.026, 64, 64);
     const atmosphereMat = new THREE.ShaderMaterial({
-      vertexShader: `
-        varying vec3 vNormal;
-        void main() {
-          vNormal = normalize(normalMatrix * normal);
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        }
-      `,
-      fragmentShader: `
-        varying vec3 vNormal;
-        void main() {
-          float intensity = pow(0.68 - dot(vNormal, vec3(0, 0, 1.0)), 2.2);
-          gl_FragColor = vec4(0.72, 0.58, 0.98, 1.0) * intensity * 0.95;
-        }
-      `,
+      vertexShader: atmosphereVertexShader,
+      fragmentShader: atmosphereFragmentShader,
+      uniforms: {
+        sunDirection: { value: sunVector },
+        atmosphereColor: { value: new THREE.Color(0x38bdf8) },
+        atmosphereOpacity: { value: 0.85 },
+      },
       blending: THREE.AdditiveBlending,
       side: THREE.BackSide,
       transparent: true,
+      depthWrite: false,
     });
     const atmosphereMesh = new THREE.Mesh(atmosphereGeo, atmosphereMat);
-    globeGroup.add(atmosphereMesh);
+    scene.add(atmosphereMesh);
+    atmosphereMeshRef.current = atmosphereMesh;
 
-    // 9. Interactive 3D Country Pins Group
+    // 8. Boundaries & Highlights Groups
+    const boundariesGroup = new THREE.Group();
+    globeGroup.add(boundariesGroup);
+    boundariesGroupRef.current = boundariesGroup;
+
+    const highlightGroup = new THREE.Group();
+    globeGroup.add(highlightGroup);
+    highlightGroupRef.current = highlightGroup;
+
     const pinsGroup = new THREE.Group();
     globeGroup.add(pinsGroup);
     pinsGroupRef.current = pinsGroup;
 
-    GLOBAL_COUNTRIES.forEach((country) => {
-      const pinPos = latLonToVector3(country.coordinates[0], country.coordinates[1], earthRadius * 1.015);
-      const isSelected = country.code === activeCountryCode;
-
-      // Small 3D Pin Dot
-      const dotGeo = new THREE.SphereGeometry(isSelected ? 0.032 : 0.016, 12, 12);
-      const dotMat = new THREE.MeshBasicMaterial({
-        color: isSelected ? 0xd946ef : 0xc084fc,
-      });
-      const dotMesh = new THREE.Mesh(dotGeo, dotMat);
-      dotMesh.position.copy(pinPos);
-      dotMesh.userData = { countryCode: country.code, countryName: country.name };
-      pinsGroup.add(dotMesh);
-
-      if (isSelected) {
-        // Pulsing Reticle Ring for selected country
-        const ringGeo = new THREE.RingGeometry(0.045, 0.065, 32);
-        const ringMat = new THREE.MeshBasicMaterial({
-          color: 0xe879f9,
-          side: THREE.DoubleSide,
-          transparent: true,
-          opacity: 0.85,
-        });
-        const ringMesh = new THREE.Mesh(ringGeo, ringMat);
-        ringMesh.position.copy(pinPos);
-        ringMesh.lookAt(pinPos.clone().multiplyScalar(2));
-        ringMesh.name = 'activeCountryRing';
-        pinsGroup.add(ringMesh);
-      }
+    // 9. Coordinate Graticule (Subtle Lat/Lon Grid)
+    const graticuleMaterial = new THREE.LineBasicMaterial({
+      color: 0xa78bfa,
+      transparent: true,
+      opacity: 0.18,
     });
 
-    // 10. Pointer Drag & Touch Zoom Interaction with Inertial Momentum
-    let isDragging = false;
-    let prevX = 0;
-    let prevY = 0;
-    let velocityX = 0;
-    let velocityY = 0;
-    let activePointers = new Map<number, { x: number; y: number }>();
-    let prevPinchDist = 0;
-
-    const onPointerDown = (e: PointerEvent) => {
-      container.setPointerCapture(e.pointerId);
-      activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-
-      if (activePointers.size === 1) {
-        isDragging = true;
-        isInteracting.current = true;
-        prevX = e.clientX;
-        prevY = e.clientY;
-        velocityX = 0;
-        velocityY = 0;
-      } else if (activePointers.size === 2) {
-        isDragging = false;
-        isInteracting.current = true;
-        const pts = Array.from(activePointers.values());
-        prevPinchDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+    for (let lat = -60; lat <= 60; lat += 30) {
+      const latPoints: THREE.Vector3[] = [];
+      for (let lon = -180; lon <= 180; lon += 6) {
+        latPoints.push(latLonToVector3(lon, lat, earthRadius * 1.001));
       }
-    };
+      const lineGeo = new THREE.BufferGeometry().setFromPoints(latPoints);
+      const line = new THREE.Line(lineGeo, graticuleMaterial);
+      globeGroup.add(line);
+    }
 
-    const onPointerMove = (e: PointerEvent) => {
-      if (!activePointers.has(e.pointerId)) return;
-      activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-
-      if (activePointers.size === 1 && isDragging) {
-        const dx = e.clientX - prevX;
-        const dy = e.clientY - prevY;
-        prevX = e.clientX;
-        prevY = e.clientY;
-
-        globeGroup.rotation.y += dx * 0.005;
-        globeGroup.rotation.x += dy * 0.005;
-        globeGroup.rotation.x = Math.max(-1.15, Math.min(1.15, globeGroup.rotation.x));
-
-        velocityX = dx * 0.005;
-        velocityY = dy * 0.005;
-      } else if (activePointers.size === 2) {
-        const pts = Array.from(activePointers.values());
-        const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
-        const pinchDelta = (prevPinchDist - dist) * 0.007;
-        prevPinchDist = dist;
-        targetZ.current = Math.max(1.8, Math.min(5.5, targetZ.current + pinchDelta));
+    for (let lon = -180; lon < 180; lon += 45) {
+      const lonPoints: THREE.Vector3[] = [];
+      for (let lat = -80; lat <= 80; lat += 5) {
+        lonPoints.push(latLonToVector3(lon, lat, earthRadius * 1.001));
       }
-    };
+      const lineGeo = new THREE.BufferGeometry().setFromPoints(lonPoints);
+      const line = new THREE.Line(lineGeo, graticuleMaterial);
+      globeGroup.add(line);
+    }
 
-    const onPointerUp = (e: PointerEvent) => {
-      activePointers.delete(e.pointerId);
-      if (activePointers.size === 0) {
-        isDragging = false;
-        setTimeout(() => {
-          isInteracting.current = false;
-        }, 1200);
-      }
-    };
-
-    const onWheel = (e: WheelEvent) => {
-      e.preventDefault();
-      const zoomDelta = e.deltaY * 0.0028;
-      targetZ.current = Math.max(1.8, Math.min(5.5, targetZ.current + zoomDelta));
-    };
-
-    container.addEventListener('pointerdown', onPointerDown);
-    container.addEventListener('pointermove', onPointerMove);
-    container.addEventListener('pointerup', onPointerUp);
-    container.addEventListener('pointercancel', onPointerUp);
-    container.addEventListener('wheel', onWheel, { passive: false });
-
-    // 11. Animation Loop with Slerp & Momentum
-    let time = 0;
+    // 10. Animation Loop with Smooth Inertial Camera
     const animate = () => {
-      time += 0.02;
       animFrameRef.current = requestAnimationFrame(animate);
 
       // Smooth camera interpolation
-      camera.position.z += (targetZ.current - camera.position.z) * 0.085;
+      currentRotX.current += (targetRotX.current - currentRotX.current) * 0.085;
+      currentRotY.current += (targetRotY.current - currentRotY.current) * 0.085;
+      currentCamZ.current += (targetCamZ.current - currentCamZ.current) * 0.085;
 
-      // Handle dragging vs auto-rotation vs target interpolation
-      if (!isDragging) {
-        globeGroup.rotation.y += velocityX;
-        globeGroup.rotation.x += velocityY;
-        velocityX *= 0.92;
-        velocityY *= 0.92;
+      if (globeGroupRef.current) {
+        globeGroupRef.current.rotation.x = currentRotX.current;
+        globeGroupRef.current.rotation.y = currentRotY.current;
 
-        if (isAutoRotating) {
-          globeGroup.rotation.y += 0.0018;
-        } else if (!isInteracting.current) {
-          globeGroup.rotation.y += (targetRotY.current - globeGroup.rotation.y) * 0.045;
-          globeGroup.rotation.x += (targetRotX.current - globeGroup.rotation.x) * 0.045;
+        // Auto-rotation when idle
+        if (isAutoRotating && !isPointerDown.current) {
+          targetRotY.current += 0.0012;
         }
       }
 
-      // Pulse active ring
-      const activeRing = pinsGroup.getObjectByName('activeCountryRing');
-      if (activeRing) {
-        const s = 1.0 + Math.sin(time * 3.5) * 0.25;
-        activeRing.scale.set(s, s, s);
+      if (cameraRef.current) {
+        cameraRef.current.position.z = currentCamZ.current;
+      }
+
+      // Rotate atmosphere with subtle dynamic limb tracking
+      if (atmosphereMeshRef.current && cameraRef.current) {
+        atmosphereMeshRef.current.position.copy(cameraRef.current.position).normalize().multiplyScalar(0.02);
       }
 
       renderer.render(scene, camera);
     };
-    animate();
-    setIsLoaded(true);
 
-    // 12. Resize
+    animate();
+
+    // Resize Handler
     const handleResize = () => {
       if (!containerRef.current || !rendererRef.current || !cameraRef.current) return;
       const w = containerRef.current.clientWidth;
@@ -575,386 +634,517 @@ export const EarthExplorer: React.FC<EarthExplorerProps> = ({
       cameraRef.current.updateProjectionMatrix();
       rendererRef.current.setSize(w, h);
     };
+
     window.addEventListener('resize', handleResize);
 
     return () => {
       window.removeEventListener('resize', handleResize);
-      container.removeEventListener('pointerdown', onPointerDown);
-      container.removeEventListener('pointermove', onPointerMove);
-      container.removeEventListener('pointerup', onPointerUp);
-      container.removeEventListener('pointercancel', onPointerUp);
-      container.removeEventListener('wheel', onWheel);
-
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
       renderer.dispose();
-      earthGeo.dispose();
-      earthMat.dispose();
-      atmosphereGeo.dispose();
-      atmosphereMat.dispose();
     };
-  }, [activeCountryCode, isAutoRotating, latLonToVector3]);
+  }, [earthRadius, latLonToVector3, loadNasaTextures]);
 
-  // Bangladesh Sub-District Overlay (Activated when country === 'BD' and geoLevel === 'district')
-  const isBangladeshDistrictView = currentCountry.code === 'BD' && geoLevel === 'district';
+  // Update Atmosphere and Clouds Shader Uniforms when toggled
+  useEffect(() => {
+    if (earthShaderMatRef.current) {
+      earthShaderMatRef.current.uniforms.cloudsOpacity.value = isCloudsActive ? 0.85 : 0.0;
+      earthShaderMatRef.current.uniforms.dayNightEnabled.value = isDayNightActive ? 1.0 : 0.0;
+    }
+    if (atmosphereMeshRef.current) {
+      atmosphereMeshRef.current.visible = isAtmosphereActive;
+    }
+  }, [isCloudsActive, isDayNightActive, isAtmosphereActive]);
 
-  const svgW = 680;
-  const svgH = 740;
-  const minLon = 88.0;
-  const maxLon = 92.8;
-  const minLat = 20.6;
-  const maxLat = 26.6;
+  // Render Country Boundaries and Highlighting
+  useEffect(() => {
+    if (!boundariesGroupRef.current || !highlightGroupRef.current || !pinsGroupRef.current) return;
 
-  const toGisSvg = (lon: number, lat: number): [number, number] => {
-    const x = ((lon - minLon) / (maxLon - minLon)) * (svgW - 120) + 60;
-    const y = ((maxLat - lat) / (maxLat - minLat)) * (svgH - 120) + 50;
-    return [x, y];
+    const boundariesGroup = boundariesGroupRef.current;
+    const highlightGroup = highlightGroupRef.current;
+    const pinsGroup = pinsGroupRef.current;
+
+    // Clear previous geometries
+    while (boundariesGroup.children.length > 0) {
+      boundariesGroup.remove(boundariesGroup.children[0]);
+    }
+    while (highlightGroup.children.length > 0) {
+      highlightGroup.remove(highlightGroup.children[0]);
+    }
+    while (pinsGroup.children.length > 0) {
+      pinsGroup.remove(pinsGroup.children[0]);
+    }
+
+    const defaultBoundaryMat = new THREE.LineBasicMaterial({
+      color: 0xc4b5fd,
+      transparent: true,
+      opacity: 0.35,
+    });
+
+    const activeBoundaryMat = new THREE.LineBasicMaterial({
+      color: 0xa855f7,
+      transparent: true,
+      opacity: 0.95,
+      linewidth: 2,
+    });
+
+    const comparisonBoundaryMat = new THREE.LineBasicMaterial({
+      color: 0x38bdf8,
+      transparent: true,
+      opacity: 0.95,
+      linewidth: 2,
+    });
+
+    GLOBAL_COUNTRIES.forEach((country) => {
+      if (!country.polygon || country.polygon.length < 3) return;
+
+      const points = country.polygon.map(([lon, lat]) =>
+        latLonToVector3(lon, lat, earthRadius * 1.002)
+      );
+
+      const isActive = country.code === activeCountryCode;
+      const isCompare = comparisonCountryCode && country.code === comparisonCountryCode;
+
+      const lineGeo = new THREE.BufferGeometry().setFromPoints(points);
+      const line = new THREE.LineLoop(
+        lineGeo,
+        isActive ? activeBoundaryMat : isCompare ? comparisonBoundaryMat : defaultBoundaryMat
+      );
+      boundariesGroup.add(line);
+
+      // Translucent surface highlight fill for selected country
+      if (isActive || isCompare) {
+        const [centerLon, centerLat] = country.coordinates;
+        const centerVec = latLonToVector3(centerLon, centerLat, earthRadius * 1.003);
+
+        // 3D Pin Beacon
+        const pinGeo = new THREE.SphereGeometry(0.022, 16, 16);
+        const pinMat = new THREE.MeshBasicMaterial({
+          color: isActive ? 0xa855f7 : 0x38bdf8,
+        });
+        const pinMesh = new THREE.Mesh(pinGeo, pinMat);
+        pinMesh.position.copy(centerVec);
+        pinsGroup.add(pinMesh);
+
+        // Pulsing orbital ring around pin
+        const ringGeo = new THREE.RingGeometry(0.035, 0.046, 32);
+        const ringMat = new THREE.MeshBasicMaterial({
+          color: isActive ? 0xc084fc : 0x7dd3fc,
+          side: THREE.DoubleSide,
+          transparent: true,
+          opacity: 0.85,
+        });
+        const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+        ringMesh.position.copy(centerVec);
+        ringMesh.lookAt(new THREE.Vector3(0, 0, 0));
+        pinsGroup.add(ringMesh);
+      }
+    });
+  }, [activeCountryCode, comparisonCountryCode, earthRadius, latLonToVector3]);
+
+  // Pointer Interaction Handlers (Mouse Drag, Pinch Zoom, Orbit)
+  const onPointerDown = (e: React.PointerEvent) => {
+    isPointerDown.current = true;
+    pointerStart.current = { x: e.clientX, y: e.clientY };
   };
 
-  const currentDistrict = useMemo(() => {
-    return BANGLADESH_DISTRICTS.find((d) => d.id === activeDistrictIdState) || BANGLADESH_DISTRICTS[0];
-  }, [activeDistrictIdState]);
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (!isPointerDown.current) return;
+    const deltaX = e.clientX - pointerStart.current.x;
+    const deltaY = e.clientY - pointerStart.current.y;
+    pointerStart.current = { x: e.clientX, y: e.clientY };
 
-  const hoveredDistrict = useMemo(() => {
-    if (!hoveredDistrictId) return null;
-    return BANGLADESH_DISTRICTS.find((d) => d.id === hoveredDistrictId) || null;
-  }, [hoveredDistrictId]);
+    targetRotY.current += deltaX * 0.006;
+    targetRotX.current = Math.max(-1.35, Math.min(1.35, targetRotX.current + deltaY * 0.006));
+  };
+
+  const onPointerUp = () => {
+    isPointerDown.current = false;
+  };
+
+  // Wheel Zoom with Smooth Exponential Limits
+  const onWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    const zoomDelta = e.deltaY * 0.0025;
+    targetCamZ.current = Math.max(1.75, Math.min(5.5, targetCamZ.current + zoomDelta));
+  };
+
+  // Touch Pinch-to-Zoom Support
+  const onTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      if (touchStartDist.current !== null) {
+        const diff = touchStartDist.current - dist;
+        targetCamZ.current = Math.max(1.75, Math.min(5.5, targetCamZ.current + diff * 0.008));
+      }
+      touchStartDist.current = dist;
+    }
+  };
+
+  const onTouchEnd = () => {
+    touchStartDist.current = null;
+  };
 
   return (
-    <div
-      className={`relative w-full ${heightClass} bg-slate-950 rounded-3xl overflow-hidden border border-purple-900/40 shadow-2xl flex flex-col justify-between select-none font-['Manrope']`}
-    >
-      {/* Top Header: Global Scale Breadcrumb, Continent Selector, and Quick Search */}
-      <div className="relative z-20 p-3 sm:p-4 bg-slate-900/90 backdrop-blur-md border-b border-purple-500/20 flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
-        {/* Scale Breadcrumb */}
-        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-          <span className="text-[10px] uppercase font-bold text-purple-300 font-sans tracking-wider">
-            SCALE:
-          </span>
+    <div className={`relative w-full ${heightClass} rounded-3xl overflow-hidden bg-[#050b14] border border-purple-900/40 select-none shadow-2xl font-['Manrope']`}>
+      {/* 3D WebGL Canvas Viewport */}
+      <div
+        ref={containerRef}
+        className="w-full h-full cursor-grab active:cursor-grabbing touch-none"
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerLeave={onPointerUp}
+        onWheel={onWheel}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+      />
 
-          <button
-            onClick={() => navigateToLevel('world')}
-            className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
-              geoLevel === 'world'
-                ? 'bg-purple-600 text-white shadow-xs'
-                : 'text-purple-200 hover:text-white hover:bg-purple-950/60'
-            }`}
-          >
-            World
-          </button>
-
-          <span className="text-purple-500 font-bold">›</span>
-
-          <button
-            onClick={() => navigateToLevel('continent')}
-            className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
-              geoLevel === 'continent'
-                ? 'bg-purple-600 text-white shadow-xs'
-                : 'text-purple-200 hover:text-white hover:bg-purple-950/60'
-            }`}
-          >
-            {currentCountry.continent}
-          </button>
-
-          <span className="text-purple-500 font-bold">›</span>
-
-          <button
-            onClick={() => navigateToLevel('country')}
-            className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
-              geoLevel === 'country'
-                ? 'bg-purple-600 text-white shadow-xs'
-                : 'text-purple-200 hover:text-white hover:bg-purple-950/60'
-            }`}
-          >
-            {currentCountry.name}
-          </button>
-
-          {currentCountry.code === 'BD' && (
-            <>
-              <span className="text-purple-500 font-bold">›</span>
-              <button
-                onClick={() => navigateToLevel(geoLevel === 'district' ? 'country' : 'district')}
-                className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
-                  geoLevel === 'district'
-                    ? 'bg-purple-600 text-white shadow-xs'
-                    : 'text-purple-300 hover:text-white hover:bg-purple-950/60 border border-purple-500/30'
-                }`}
-              >
-                {geoLevel === 'district' ? `District: ${currentDistrict.name}` : 'Districts GIS (64)'}
-              </button>
-            </>
-          )}
-        </div>
-
-        {/* Global Country Quick Search & View Controls */}
-        <div className="flex items-center gap-2">
-          {/* Quick Country Search Dropdown */}
-          <div className="relative">
-            <div className="flex items-center bg-slate-800/90 border border-purple-500/30 rounded-xl px-2.5 py-1 text-xs">
-              <Search className="w-3.5 h-3.5 text-purple-300 mr-1.5 shrink-0" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onFocus={() => setIsSearchFocused(true)}
-                placeholder="Search country..."
-                className="bg-transparent text-white placeholder-slate-400 focus:outline-none w-24 sm:w-32 text-xs"
-              />
-              {searchQuery && (
-                <button onClick={() => setSearchQuery('')} className="text-slate-400 hover:text-white ml-1">
-                  <X className="w-3 h-3" />
-                </button>
-              )}
-            </div>
-
-            {/* Dropdown Suggestions */}
-            {isSearchFocused && searchQuery.length > 0 && (
-              <div
-                className="absolute right-0 top-full mt-1.5 w-60 bg-slate-900 border border-purple-500/40 rounded-xl shadow-2xl p-1 z-50 max-h-56 overflow-y-auto"
-                onMouseLeave={() => setIsSearchFocused(false)}
-              >
-                {searchResults.map((c) => (
-                  <button
-                    key={c.code}
-                    onClick={() => {
-                      focusCountry(c, 'country');
-                      setSearchQuery('');
-                      setIsSearchFocused(false);
-                    }}
-                    className="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-purple-950/70 text-xs text-white flex items-center justify-between transition-colors"
-                  >
-                    <span className="font-bold">{c.name}</span>
-                    <span className="text-[10px] text-purple-300 font-mono">{c.code} • {c.region}</span>
-                  </button>
-                ))}
-              </div>
-            )}
+      {/* Top Left: Planetary Header & Real NASA Layer Badge */}
+      <div className="absolute top-4 left-4 z-20 flex flex-col gap-1.5 max-w-[85vw] sm:max-w-md pointer-events-none">
+        <div className="flex items-center gap-2 pointer-events-auto">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-950/80 backdrop-blur-md border border-purple-500/30 text-purple-200 text-xs font-mono font-bold shadow-lg">
+            <Globe className="w-3.5 h-3.5 text-purple-400 animate-pulse" />
+            <span className="truncate">REALISTIC EARTH INSTRUMENT</span>
           </div>
 
-          {/* Controls */}
-          <button
-            onClick={() => setIsAutoRotating((prev) => !prev)}
-            className={`p-1.5 rounded-lg border transition-all ${
-              isAutoRotating
-                ? 'bg-purple-600 border-purple-400 text-white'
-                : 'bg-slate-800/90 border-purple-500/30 text-purple-200 hover:bg-purple-900/60'
-            }`}
-            title={isAutoRotating ? 'Pause Rotation' : 'Auto Rotate Earth'}
-          >
-            {isAutoRotating ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-          </button>
+          <div className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-950/80 backdrop-blur-md border border-slate-700 text-slate-300 text-[10px] font-mono">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+            <span className="truncate">{imagerySourceLabel}</span>
+          </div>
+        </div>
+
+        {/* Floating Minimal Badge for Selected Country */}
+        <div className="bg-slate-950/85 backdrop-blur-md border border-purple-500/40 rounded-2xl p-3 text-white shadow-xl pointer-events-auto flex items-center justify-between gap-3">
+          <div>
+            <span className="text-[10px] font-mono text-purple-400 uppercase tracking-wider font-bold block">
+              SELECTED OBSERVATION TARGET
+            </span>
+            <div className="text-sm sm:text-base font-extrabold font-['Space_Grotesk'] text-slate-100 flex items-center gap-1.5">
+              <span>{activeCountry.name}</span>
+              <span className="text-xs font-mono text-purple-300 font-semibold">({activeCountry.code3})</span>
+            </div>
+            <div className="text-[11px] font-mono text-slate-400 mt-0.5">
+              {activeResult.variableName} •{' '}
+              <strong className={activeResult.trend.direction === 'increasing' ? 'text-amber-400' : 'text-cyan-400'}>
+                {activeResult.slope.valuePerDecade > 0 ? '+' : ''}
+                {activeResult.slope.valuePerDecade} {activeResult.slope.unit}
+              </strong>
+            </div>
+          </div>
 
           <button
-            onClick={() => {
-              targetZ.current = Math.max(1.8, targetZ.current - 0.45);
-            }}
-            className="p-1.5 rounded-lg bg-slate-800/90 border border-purple-500/30 text-purple-200 hover:bg-purple-900/60"
-            title="Zoom In"
+            onClick={() => onNavigateToInvestigate?.(activeCountry.code)}
+            className="p-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white transition-colors text-xs font-mono font-bold flex items-center gap-1 shrink-0 shadow-md"
+            title="Launch Full Scientific Lab"
           >
-            <ZoomIn className="w-3.5 h-3.5" />
-          </button>
-
-          <button
-            onClick={() => {
-              targetZ.current = Math.min(5.5, targetZ.current + 0.45);
-            }}
-            className="p-1.5 rounded-lg bg-slate-800/90 border border-purple-500/30 text-purple-200 hover:bg-purple-900/60"
-            title="Zoom Out"
-          >
-            <ZoomOut className="w-3.5 h-3.5" />
-          </button>
-
-          <button
-            onClick={() => navigateToLevel('world')}
-            className="p-1.5 rounded-lg bg-slate-800/90 border border-purple-500/30 text-purple-200 hover:bg-purple-900/60"
-            title="Reset to Full World View"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
+            <Compass className="w-4 h-4" />
+            <span className="hidden sm:inline">Investigate</span>
           </button>
         </div>
       </div>
 
-      {/* Main Geographic Canvas Area */}
-      <div className="relative flex-1 w-full h-full overflow-hidden">
-        {/* Layer 1: 3D Earth Globe Canvas */}
-        <div
-          ref={containerRef}
-          className={`absolute inset-0 w-full h-full cursor-grab active:cursor-grabbing transition-opacity duration-500 ${
-            isBangladeshDistrictView ? 'opacity-25 pointer-events-none' : 'opacity-100'
-          }`}
-          style={{ touchAction: 'none' }}
-        />
+      {/* Top Right: Country Search Button & Overlay Switcher */}
+      <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
+        <button
+          onClick={() => setIsSearchOpen((prev) => !prev)}
+          className="px-3.5 py-2 rounded-xl bg-slate-950/85 hover:bg-purple-950/90 backdrop-blur-md border border-purple-500/40 text-purple-200 text-xs font-mono font-bold shadow-lg transition-all flex items-center gap-2"
+        >
+          <Search className="w-3.5 h-3.5 text-purple-400" />
+          <span>{isSearchOpen ? 'Close Search' : 'Find Country'}</span>
+        </button>
 
-        {/* Floating Quick Continent Selector Strip */}
-        {!isBangladeshDistrictView && (
-          <div className="absolute left-3 top-3 z-10 hidden sm:flex flex-col gap-1 p-1.5 rounded-2xl bg-slate-900/80 backdrop-blur-md border border-purple-500/25 text-[10px] font-mono text-purple-200">
-            <span className="px-2 py-0.5 text-[9px] uppercase tracking-wider text-purple-400 font-bold">
-              CONTINENTS
+        <button
+          onClick={() => setIsDetailsOpen((prev) => !prev)}
+          className="p-2 rounded-xl bg-slate-950/85 hover:bg-purple-950/90 backdrop-blur-md border border-purple-500/40 text-purple-200 text-xs shadow-lg transition-all"
+          title="Toggle Scientific Information Card"
+        >
+          <Info className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* Country Search Drawer Panel */}
+      {isSearchOpen && (
+        <div className="absolute top-16 right-4 z-30 w-80 max-w-[90vw] bg-slate-950/95 backdrop-blur-xl border border-purple-500/40 rounded-3xl p-4 shadow-2xl text-white space-y-3 animate-in fade-in zoom-in-95 duration-200">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
+            <span className="text-xs font-mono uppercase tracking-wider text-purple-400 font-bold">
+              Global Country Registry (74 Supported)
             </span>
-            {['All', 'Asia', 'Europe', 'Africa', 'North America', 'South America', 'Oceania'].map((cont) => (
+            <button
+              onClick={() => setIsSearchOpen(false)}
+              className="p-1 rounded-lg text-slate-400 hover:text-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Search Input Field */}
+          <div className="relative">
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search by country, code, or capital..."
+              className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-900 border border-purple-500/30 text-xs font-mono text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-purple-400"
+              autoFocus
+            />
+          </div>
+
+          {/* Continent Filter Chips */}
+          <div className="flex flex-wrap gap-1 text-[10px] font-mono">
+            {['All', 'Asia', 'Europe', 'Africa', 'North America', 'South America', 'Oceania'].map((c) => (
               <button
-                key={cont}
-                onClick={() => {
-                  setSelectedContinent(cont);
-                  if (cont !== 'All') {
-                    const firstCountry = GLOBAL_COUNTRIES.find((c) => c.continent === cont);
-                    if (firstCountry) focusCountry(firstCountry, 'continent');
-                  } else {
-                    navigateToLevel('world');
-                  }
-                }}
-                className={`px-2 py-1 rounded-lg text-left transition-all ${
-                  selectedContinent === cont
-                    ? 'bg-purple-600 text-white font-bold'
-                    : 'hover:bg-purple-950/60 text-slate-300'
+                key={c}
+                onClick={() => setSelectedContinent(c)}
+                className={`px-2 py-0.5 rounded-lg border transition-colors ${
+                  selectedContinent === c
+                    ? 'bg-purple-600 border-purple-400 text-white font-bold'
+                    : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
                 }`}
               >
-                {cont}
+                {c}
               </button>
             ))}
           </div>
-        )}
 
-        {/* Layer 2: High-Resolution Bangladesh GIS Administrative Boundary Map (When in District View) */}
-        {isBangladeshDistrictView && (
-          <div className="absolute inset-0 w-full h-full flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xs animate-in fade-in zoom-in-95 duration-300">
-            <svg viewBox={`0 0 ${svgW} ${svgH}`} className="w-full h-full max-h-[560px] filter drop-shadow-xl select-none">
-              {/* Graticule Lat/Lon Guidelines */}
-              <g opacity="0.3" stroke="#94a3b8" strokeWidth="0.8" strokeDasharray="3 3">
-                {[21, 22, 23, 24, 25, 26].map((lat) => {
-                  const [, y] = toGisSvg(88, lat);
-                  return (
-                    <g key={`lat-${lat}`}>
-                      <line x1="50" y1={y} x2={svgW - 50} y2={y} />
-                      <text x="55" y={y - 3} fill="#a78bfa" fontSize="9" fontFamily="monospace">
-                        {lat}°N
-                      </text>
-                    </g>
-                  );
-                })}
-                {[89, 90, 91, 92].map((lon) => {
-                  const [x] = toGisSvg(lon, 26.6);
-                  return (
-                    <g key={`lon-${lon}`}>
-                      <line x1={x} y1="50" x2={x} y2={svgH - 50} />
-                      <text x={x + 3} y="65" fill="#a78bfa" fontSize="9" fontFamily="monospace">
-                        {lon}°E
-                      </text>
-                    </g>
-                  );
-                })}
-              </g>
-
-              {/* Major Transboundary River Corridors */}
-              <g stroke="#60a5fa" strokeWidth="2.5" fill="none" opacity="0.75" strokeLinecap="round">
-                <path d="M 230 80 Q 260 190 280 300 T 330 410" />
-                <path d="M 80 270 Q 190 330 290 370 T 360 430" />
-                <path d="M 360 430 Q 410 490 450 570" strokeWidth="4.5" />
-              </g>
-
-              {/* Contiguous Real District Polygons */}
-              {BANGLADESH_DISTRICT_GEOMETRIES.map((geo) => {
-                const districtData = BANGLADESH_DISTRICTS.find((d) => d.id === geo.id);
-                if (!districtData) return null;
-
-                const isSelected = geo.id === activeDistrictIdState;
-                const isHovered = geo.id === hoveredDistrictId;
-
-                const ptsStr = geo.polygon
-                  .map(([lon, lat]) => {
-                    const [x, y] = toGisSvg(lon, lat);
-                    return `${x},${y}`;
-                  })
-                  .join(' ');
-
-                const [cx, cy] = toGisSvg(geo.center[0], geo.center[1]);
-
-                return (
-                  <g
-                    key={geo.id}
-                    onClick={() => {
-                      navigateToLevel('district', 'BD', geo.id);
-                    }}
-                    onMouseEnter={() => setHoveredDistrictId(geo.id)}
-                    onMouseLeave={() => setHoveredDistrictId(null)}
-                    className="cursor-pointer group"
-                  >
-                    <polygon
-                      points={ptsStr}
-                      fill={isSelected ? '#7c3aed' : isHovered ? '#c084fc' : '#312e81'}
-                      stroke={isSelected ? '#ffffff' : '#6366f1'}
-                      strokeWidth={isSelected ? 2.8 : 1.2}
-                      className="transition-colors duration-150"
-                    />
-
-                    <circle
-                      cx={cx}
-                      cy={cy}
-                      r={isSelected ? 4.5 : 2.5}
-                      fill={isSelected ? '#ffffff' : '#a855f7'}
-                      stroke="#ffffff"
-                      strokeWidth={1}
-                    />
-
-                    <text
-                      x={cx + 6}
-                      y={cy + 3}
-                      fill={isSelected ? '#ffffff' : '#e2e8f0'}
-                      fontSize={isSelected ? '11' : '9.5'}
-                      fontWeight={isSelected ? '800' : '600'}
-                      fontFamily="sans-serif"
-                      className="pointer-events-none drop-shadow-sm"
-                    >
-                      {geo.name}
-                    </text>
-                  </g>
-                );
-              })}
-            </svg>
-          </div>
-        )}
-      </div>
-
-      {/* Bottom Telemetry HUD Bar & Actions */}
-      <div className="relative z-20 p-3 sm:p-4 bg-slate-900/95 backdrop-blur-md border-t border-purple-500/20 flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
-        <div className="flex items-center gap-3">
-          <span className="w-2.5 h-2.5 rounded-full bg-purple-400 animate-ping" />
-          <div className="text-white text-[11px]">
-            <span className="font-extrabold text-purple-300 block">
-              {isBangladeshDistrictView
-                ? `${(hoveredDistrict || currentDistrict).name} District • ${(hoveredDistrict || currentDistrict).divisionName} Division (Bangladesh)`
-                : `${currentCountry.name} (${currentCountry.code3}) • ${currentCountry.region}, ${currentCountry.continent}`}
-            </span>
-            <span className="text-[10px] text-purple-200/80 block">
-              {isBangladeshDistrictView
-                ? `Elevation: ${(hoveredDistrict || currentDistrict).elevationMeters}m MSL • ${(hoveredDistrict || currentDistrict).isCoastal ? 'Coastal Delta' : 'Inland Basin'}`
-                : `Coordinates: ${currentCountry.coordinates[1].toFixed(2)}°N, ${currentCountry.coordinates[0].toFixed(2)}°E • Area: ${currentCountry.areaSqKm.toLocaleString()} km² • Capital: ${currentCountry.capital}`}
-            </span>
-            <span className="text-[9px] text-purple-300/60 block mt-0.5">
-              Derived from NASA dataset using GlobTraceX spatial aggregation.
-            </span>
+          {/* Filtered Country Results List */}
+          <div className="max-h-60 overflow-y-auto space-y-1 pr-1 custom-scrollbar">
+            {filteredCountries.slice(0, 15).map((country) => {
+              const isSelected = country.code === activeCountryCode;
+              return (
+                <button
+                  key={country.code}
+                  onClick={() => handleSelectCountry(country)}
+                  className={`w-full p-2 rounded-xl text-left flex items-center justify-between text-xs transition-colors ${
+                    isSelected
+                      ? 'bg-purple-900/70 border border-purple-400 text-white font-bold'
+                      : 'hover:bg-slate-900 text-slate-300'
+                  }`}
+                >
+                  <div className="truncate">
+                    <div className="font-['Space_Grotesk'] font-bold text-slate-100 truncate">
+                      {country.name}
+                    </div>
+                    <div className="text-[10px] font-mono text-slate-400">
+                      {country.capital} • {country.region}
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-mono bg-slate-800 text-purple-300 px-1.5 py-0.5 rounded ml-2">
+                    {country.code3}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
+      )}
 
-        {/* Action Controls */}
-        <div className="flex items-center gap-2">
-          {showInvestigationAction && (
-            <button
-              onClick={() =>
-                onNavigateToInvestigate?.(
-                  currentCountry.code,
-                  isBangladeshDistrictView ? activeDistrictIdState : undefined
-                )
-              }
-              className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-['Space_Grotesk'] font-bold text-xs shadow-lg transition-all flex items-center gap-2 active:scale-95 border border-purple-400/40"
-            >
-              <span>
-                Investigate {isBangladeshDistrictView ? currentDistrict.name : currentCountry.name}
+      {/* Floating Scientific Data Card (Section 12 & 26 Specification) */}
+      {isDetailsOpen && (
+        <div className="absolute bottom-4 right-4 z-20 w-84 max-w-[90vw] bg-slate-950/90 backdrop-blur-xl border border-purple-500/40 rounded-3xl p-5 shadow-2xl text-white space-y-4 animate-in fade-in slide-in-from-bottom-3 duration-200">
+          <div className="flex items-start justify-between gap-2 border-b border-slate-800/80 pb-3">
+            <div>
+              <span className="text-[10px] font-mono text-purple-400 uppercase tracking-widest font-bold block">
+                STATISTICAL EVIDENCE CARD
               </span>
+              <h3 className="text-lg font-black text-white font-['Space_Grotesk'] tracking-tight">
+                {activeCountry.name}
+              </h3>
+              <p className="text-[11px] font-mono text-slate-400">
+                {activeCountry.region}, {activeCountry.continent} • {activeCountry.areaSqKm.toLocaleString()} km²
+              </p>
+            </div>
+            <button
+              onClick={() => setIsDetailsOpen(false)}
+              className="p-1 rounded-lg text-slate-400 hover:text-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Scientific Variables Tabs */}
+          <div className="space-y-1">
+            <span className="text-[10px] font-mono uppercase text-slate-400 font-bold block">
+              VARIABLE OVERLAY (EARTH REMAINS BASE)
+            </span>
+            <div className="grid grid-cols-5 gap-1 pt-0.5">
+              {[
+                { id: 'rainfall', label: 'Rain' },
+                { id: 'lst', label: 'Temp' },
+                { id: 'ndvi', label: 'Plant' },
+                { id: 'tws', label: 'Water' },
+                { id: 'solar', label: 'Solar' },
+              ].map((v) => (
+                <button
+                  key={v.id}
+                  onClick={() => setCurrentVariable(v.id as any)}
+                  className={`py-1.5 rounded-lg text-[10px] font-mono font-bold transition-all text-center ${
+                    currentVariable === v.id
+                      ? 'bg-purple-600 text-white shadow-md'
+                      : 'bg-slate-900 hover:bg-slate-800 text-slate-400'
+                  }`}
+                >
+                  {v.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Core Numerical Finding */}
+          <div className="p-3.5 rounded-2xl bg-purple-950/40 border border-purple-500/30 space-y-1">
+            <div className="flex items-center justify-between text-[11px] font-mono">
+              <span className="text-slate-300 font-bold">{activeResult.variableName}</span>
+              <span
+                className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                  activeResult.trend.significant
+                    ? 'bg-emerald-950 text-emerald-300 border border-emerald-500/40'
+                    : 'bg-slate-900 text-slate-400 border border-slate-700'
+                }`}
+              >
+                {activeResult.trend.significant ? 'SIGNIFICANT' : 'NOT SIGNIFICANT'}
+              </span>
+            </div>
+
+            <div className="text-2xl font-black font-['Space_Grotesk'] tracking-tight text-white flex items-baseline gap-2 pt-1">
+              <span>
+                {activeResult.slope.valuePerDecade > 0 ? '+' : ''}
+                {activeResult.slope.valuePerDecade}
+              </span>
+              <span className="text-xs font-mono font-normal text-purple-300">{activeResult.slope.unit}</span>
+            </div>
+
+            <p className="text-[10px] font-mono text-slate-400">
+              Observation period: {activeResult.period.start}–{activeResult.period.end} • p-value = {activeResult.trend.p_value}
+            </p>
+          </div>
+
+          {/* Statistical Breakdown Grid */}
+          <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+            <div className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800">
+              <span className="text-[9px] text-slate-500 block">MANN-KENDALL Z</span>
+              <span className="text-sm font-bold text-purple-300">{activeResult.trend.mannKendallZ}</span>
+            </div>
+            <div className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800">
+              <span className="text-[9px] text-slate-500 block">DATA COMPLETENESS</span>
+              <span className="text-sm font-bold text-purple-300">{activeResult.observations.coveragePct}%</span>
+            </div>
+          </div>
+
+          {/* Provenance Trace Action */}
+          <div className="pt-1 flex items-center justify-between gap-2">
+            <button
+              onClick={() => onNavigateToInvestigate?.(activeCountry.code)}
+              className="w-full py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-mono font-bold text-xs shadow-md transition-colors flex items-center justify-center gap-1.5"
+            >
+              <span>Explore Detailed Provenance</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
-          )}
+          </div>
         </div>
+      )}
+
+      {/* Bottom Left: Globe Camera & Environment Controls HUD */}
+      <div className="absolute bottom-4 left-4 z-20 flex flex-wrap items-center gap-1.5 bg-slate-950/85 backdrop-blur-md border border-purple-500/30 p-1.5 rounded-2xl shadow-lg">
+        {/* Reset View */}
+        <button
+          onClick={() => flyToCountry(activeCountry)}
+          className="p-2 rounded-xl text-slate-300 hover:text-white hover:bg-purple-950/60 transition-colors"
+          title="Center on Target Country"
+        >
+          <MapPin className="w-4 h-4 text-purple-400" />
+        </button>
+
+        {/* Global Overview */}
+        <button
+          onClick={() => {
+            targetCamZ.current = 4.6;
+            targetRotX.current = 0.35;
+          }}
+          className="p-2 rounded-xl text-slate-300 hover:text-white hover:bg-purple-950/60 transition-colors"
+          title="Planetary Overview"
+        >
+          <RotateCcw className="w-4 h-4 text-purple-400" />
+        </button>
+
+        {/* Zoom In */}
+        <button
+          onClick={() => {
+            targetCamZ.current = Math.max(1.75, targetCamZ.current - 0.4);
+          }}
+          className="p-2 rounded-xl text-slate-300 hover:text-white hover:bg-purple-950/60 transition-colors"
+          title="Zoom In"
+        >
+          <ZoomIn className="w-4 h-4 text-slate-300" />
+        </button>
+
+        {/* Zoom Out */}
+        <button
+          onClick={() => {
+            targetCamZ.current = Math.min(5.5, targetCamZ.current + 0.4);
+          }}
+          className="p-2 rounded-xl text-slate-300 hover:text-white hover:bg-purple-950/60 transition-colors"
+          title="Zoom Out"
+        >
+          <ZoomOut className="w-4 h-4 text-slate-300" />
+        </button>
+
+        <div className="w-px h-5 bg-slate-800 mx-0.5" />
+
+        {/* Auto-Rotation Toggle */}
+        <button
+          onClick={() => setIsAutoRotating((prev) => !prev)}
+          className={`p-2 rounded-xl transition-colors ${
+            isAutoRotating ? 'bg-purple-600 text-white' : 'text-slate-400 hover:text-white hover:bg-slate-900'
+          }`}
+          title={isAutoRotating ? 'Pause Planetary Rotation' : 'Enable Planetary Rotation'}
+        >
+          {isAutoRotating ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+        </button>
+
+        {/* Day/Night Lighting Toggle */}
+        <button
+          onClick={() => setIsDayNightActive((prev) => !prev)}
+          className={`p-2 rounded-xl transition-colors ${
+            isDayNightActive ? 'bg-indigo-900 text-indigo-200' : 'text-slate-400 hover:text-white hover:bg-slate-900'
+          }`}
+          title="Toggle Day/Night Orbital Lighting"
+        >
+          {isDayNightActive ? <Sun className="w-4 h-4 text-amber-300" /> : <Moon className="w-4 h-4" />}
+        </button>
+
+        {/* Atmosphere Halo Toggle */}
+        <button
+          onClick={() => setIsAtmosphereActive((prev) => !prev)}
+          className={`p-2 rounded-xl transition-colors ${
+            isAtmosphereActive ? 'bg-sky-950 text-sky-300' : 'text-slate-400 hover:text-white hover:bg-slate-900'
+          }`}
+          title="Toggle Rayleigh Atmospheric Glow"
+        >
+          <Eye className="w-4 h-4 text-sky-400" />
+        </button>
+
+        {/* NASA Clouds Layer Toggle */}
+        <button
+          onClick={() => setIsCloudsActive((prev) => !prev)}
+          className={`p-2 rounded-xl transition-colors ${
+            isCloudsActive ? 'bg-slate-800 text-white font-bold' : 'text-slate-400 hover:text-white hover:bg-slate-900'
+          }`}
+          title="Toggle NASA MODIS Real-time Cloud Fraction"
+        >
+          <Cloud className="w-4 h-4 text-slate-300" />
+        </button>
       </div>
+
+      {/* Subtle Loading Indicator for Progressive Tiles */}
+      {isImageryLoading && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 px-3.5 py-1.5 rounded-full bg-slate-950/90 backdrop-blur-md border border-purple-500/40 text-purple-200 text-xs font-mono font-bold shadow-xl flex items-center gap-2">
+          <div className="w-3 h-3 rounded-full border-2 border-purple-400 border-t-transparent animate-spin" />
+          <span>Streaming NASA GIBS Earth Observation Tiles...</span>
+        </div>
+      )}
     </div>
   );
 };

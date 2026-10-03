@@ -142,6 +142,7 @@ export const ComparePage: React.FC = () => {
           <EarthExplorer
             initialLevel={comparisonMode === 'districts' ? 'district' : 'country'}
             selectedCountryCode={countryA.code}
+            comparisonCountryCode={comparisonMode === 'countries' ? countryB.code : undefined}
             onSelectCountry={(c) => setCountryACode(c)}
             selectedDistrictId={districtA.id}
             onSelectDistrict={(id) => setDistrictAId(id)}

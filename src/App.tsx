@@ -10,6 +10,9 @@ import { HomePage } from './pages/HomePage';
 const InvestigatePage = lazy(() => import('./pages/InvestigatePage').then((m) => ({ default: m.InvestigatePage })));
 const ComparePage = lazy(() => import('./pages/ComparePage').then((m) => ({ default: m.ComparePage })));
 const DatasetsPage = lazy(() => import('./pages/DatasetsPage').then((m) => ({ default: m.DatasetsPage })));
+const HotHumidDatasetPage = lazy(() => import('./pages/HotHumidDatasetPage').then((m) => ({ default: m.HotHumidDatasetPage })));
+const AtlasPage = lazy(() => import('./pages/AtlasPage').then((m) => ({ default: m.AtlasPage })));
+const ResearchPage = lazy(() => import('./pages/ResearchPage').then((m) => ({ default: m.ResearchPage })));
 const ReferencesPage = lazy(() => import('./pages/ReferencesPage').then((m) => ({ default: m.ReferencesPage })));
 const AboutPage = lazy(() => import('./pages/AboutPage').then((m) => ({ default: m.AboutPage })));
 const TeamPage = lazy(() => import('./pages/TeamPage').then((m) => ({ default: m.TeamPage })));
@@ -98,8 +101,22 @@ export default function App() {
 
               {currentRoute === '/compare' && <ComparePage />}
 
+              {(currentRoute === '/datasets/hot-humid-days' ||
+                currentRoute === '/datasets/hot_humid' ||
+                currentRoute === '/hot-humid') && (
+                <HotHumidDatasetPage onNavigate={navigate} />
+              )}
+
               {(currentRoute === '/datasets' || currentRoute === '/data') && (
-                <DatasetsPage />
+                <DatasetsPage onNavigate={navigate} />
+              )}
+
+              {(currentRoute === '/atlas') && (
+                <AtlasPage onNavigate={navigate} />
+              )}
+
+              {(currentRoute === '/community' || currentRoute === '/publish' || currentRoute === '/research') && (
+                <ResearchPage onNavigate={navigate} />
               )}
 
               {(currentRoute === '/references' || currentRoute === '/methodology' || currentRoute === '/sources') && (
@@ -112,7 +129,7 @@ export default function App() {
 
               {currentRoute === '/team' && <TeamPage />}
 
-              {(currentRoute === '/auth' || currentRoute === '/sign-in') && (
+              {(currentRoute === '/auth' || currentRoute === '/sign-in' || currentRoute === '/account') && (
                 <AuthPage onNavigate={navigate} />
               )}
 
@@ -126,9 +143,17 @@ export default function App() {
                 '/ocean',
                 '/bangladesh',
                 '/trends',
+                '/countries',
                 '/compare',
+                '/atlas',
                 '/datasets',
+                '/datasets/hot-humid-days',
+                '/datasets/hot_humid',
+                '/hot-humid',
                 '/data',
+                '/community',
+                '/publish',
+                '/research',
                 '/references',
                 '/methodology',
                 '/sources',
@@ -138,8 +163,9 @@ export default function App() {
                 '/team',
                 '/auth',
                 '/sign-in',
+                '/account',
                 '/admin',
-              ].includes(currentRoute) && (
+              ].includes(currentRoute) && !currentRoute.startsWith('/country/') && (
                 <div className="max-w-md mx-auto my-20 p-8 text-center bg-white rounded-3xl border border-purple-100 shadow-lg space-y-4">
                   <div className="w-10 h-10 rounded-2xl bg-purple-100 text-purple-700 flex items-center justify-center mx-auto font-black text-sm">
                     GTX

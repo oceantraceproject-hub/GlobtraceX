@@ -67,6 +67,22 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
               </li>
               <li>
                 <button
+                  onClick={() => onNavigate('/datasets/hot-humid-days')}
+                  className="hover:text-purple-700 transition-colors text-purple-700 font-bold"
+                >
+                  Hot &amp; Humid Days (Derived)
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => onNavigate('/atlas')}
+                  className="hover:text-purple-700 transition-colors"
+                >
+                  Spatiotemporal Atlas
+                </button>
+              </li>
+              <li>
+                <button
                   onClick={() => onNavigate('/references')}
                   className="hover:text-purple-700 transition-colors"
                 >

@@ -7,6 +7,7 @@ import { TimeSeriesChart } from '../components/TimeSeriesChart';
 import { FourQuestions } from '../components/FourQuestions';
 import { TraceToSourceModal } from '../components/TraceToSourceModal';
 import { CalculationsModal } from '../components/CalculationsModal';
+import { TrendAlertModal } from '../components/TrendAlertModal';
 import { getObservationsForRegion, computeTrendAnalysis } from '../lib/scienceEngine';
 import {
   Compass,
@@ -29,6 +30,7 @@ import {
   MapPin,
   CheckCircle2,
   AlertTriangle,
+  Bell,
 } from 'lucide-react';
 
 interface OceanPageProps {
@@ -50,6 +52,7 @@ export const OceanPage: React.FC<OceanPageProps> = ({
   const [activeTab, setActiveTab] = useState<'map' | 'trends' | 'basins'>('map');
   const [isTraceModalOpen, setIsTraceModalOpen] = useState<boolean>(false);
   const [isCalcModalOpen, setIsCalcModalOpen] = useState<boolean>(false);
+  const [isAlertModalOpen, setIsAlertModalOpen] = useState<boolean>(false);
 
   // Time scrubber state (2002 to 2026)
   const [currentYear, setCurrentYear] = useState<number>(2024);
@@ -168,15 +171,25 @@ export const OceanPage: React.FC<OceanPageProps> = ({
               </div>
             </div>
 
-            {/* Link to coupled Bangladesh Earth System */}
-            <button
-              onClick={() => onNavigate('/bangladesh')}
-              className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-950 to-cyan-950 border border-emerald-800/80 hover:border-emerald-600 text-emerald-300 text-xs font-semibold flex items-center gap-2 transition-all group"
-            >
-              <MapPin className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Trace Coupled Bay of Bengal → Bangladesh Land Impact</span>
-              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-            </button>
+            {/* Action Buttons: Alerts + Bangladesh Coupling */}
+            <div className="flex flex-wrap items-center gap-2.5">
+              <button
+                onClick={() => setIsAlertModalOpen(true)}
+                className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-950 to-orange-950 border border-amber-600/80 hover:border-amber-400 text-amber-300 text-xs font-semibold flex items-center gap-2 transition-all shadow-md group"
+              >
+                <Bell className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+                <span>Subscribe to Trend Alerts</span>
+              </button>
+
+              <button
+                onClick={() => onNavigate('/bangladesh')}
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-950 to-cyan-950 border border-emerald-800/80 hover:border-emerald-600 text-emerald-300 text-xs font-semibold flex items-center gap-2 transition-all group"
+              >
+                <MapPin className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Coupled Bay of Bengal → BD Land</span>
+                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+              </button>
+            </div>
           </div>
 
           <p className="text-xs sm:text-sm text-slate-400 max-w-3xl leading-relaxed">
@@ -286,6 +299,13 @@ export const OceanPage: React.FC<OceanPageProps> = ({
             >
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
               <span>TRACE TO SOURCE</span>
+            </button>
+            <button
+              onClick={() => setIsAlertModalOpen(true)}
+              className="px-3 py-1.5 rounded-lg bg-amber-950/80 hover:bg-amber-900 border border-amber-600/80 text-amber-300 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-2xs"
+            >
+              <Bell className="w-3.5 h-3.5 text-amber-400" />
+              <span>THRESHOLD ALERT</span>
             </button>
           </div>
         </div>
@@ -643,6 +663,14 @@ export const OceanPage: React.FC<OceanPageProps> = ({
         isOpen={isCalcModalOpen}
         onClose={() => setIsCalcModalOpen(false)}
         trendResult={trendResult}
+      />
+
+      {/* Trend Alert Modal pre-configured for ocean parameters */}
+      <TrendAlertModal
+        isOpen={isAlertModalOpen}
+        onClose={() => setIsAlertModalOpen(false)}
+        defaultParameter={selectedVariable === 'ssh_anomaly' ? 'sea_level' : 'sst'}
+        defaultRegionCode={selectedRegion.id}
       />
     </div>
   );

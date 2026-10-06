@@ -16,8 +16,8 @@ import {
 
 interface EvidenceConstellationProps {
   signals: DimensionFingerprint[];
-  activeVariable: 'lst' | 'rainfall' | 'ndvi' | 'tws' | 'solar';
-  onSelectVariable: (variable: 'lst' | 'rainfall' | 'ndvi' | 'tws' | 'solar') => void;
+  activeVariable: 'lst' | 'rainfall' | 'ndvi' | 'tws' | 'solar' | 'hot_humid';
+  onSelectVariable: (variable: 'lst' | 'rainfall' | 'ndvi' | 'tws' | 'solar' | 'hot_humid') => void;
   countryName: string;
 }
 
@@ -34,6 +34,7 @@ export const EvidenceConstellation: React.FC<EvidenceConstellationProps> = ({
     tws: { x: 340, y: 130, label: 'Water Storage', icon: Waves },
     ndvi: { x: 130, y: 215, label: 'Vegetation (NDVI)', icon: Sprout },
     solar: { x: 290, y: 215, label: 'Solar Irradiance', icon: Sun },
+    hot_humid: { x: 210, y: 130, label: 'Humid Heat', icon: Sparkles },
   };
 
   // Co-occurrence analytical couplings (Non-causal analytical co-occurrence)

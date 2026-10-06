@@ -22,8 +22,10 @@ import {
   ScientificObservation,
 } from '../compute/globTraceScience';
 import { EarthExplorer } from '../components/EarthExplorer';
+import { GoogleEarthMap } from '../components/GoogleEarthMap';
 import { GlobTraceChart } from '../components/GlobTraceChart';
 import { EvidenceDrawer } from '../components/EvidenceDrawer';
+import { TrendAlertModal } from '../components/TrendAlertModal';
 import {
   MapPin,
   Thermometer,
@@ -48,6 +50,7 @@ import {
   GitCompare,
   CheckCircle2,
   Lock,
+  Bell,
 } from 'lucide-react';
 
 interface InvestigatePageProps {
@@ -71,6 +74,8 @@ export const InvestigatePage: React.FC<InvestigatePageProps> = ({ onNavigate }) 
   const [selectedVariable, setSelectedVariable] = useState<'lst' | 'rainfall' | 'ndvi' | 'tws' | 'solar'>('lst');
   const [useAnomalies, setUseAnomalies] = useState<boolean>(true);
   const [isEvidenceDrawerOpen, setIsEvidenceDrawerOpen] = useState<boolean>(false);
+  const [isAlertModalOpen, setIsAlertModalOpen] = useState<boolean>(false);
+  const [mapEngine, setMapEngine] = useState<'google' | 'globe'>('google');
 
   // Active country object
   const activeCountry: GlobalCountry = useMemo(() => {
@@ -184,7 +189,7 @@ export const InvestigatePage: React.FC<InvestigatePageProps> = ({ onNavigate }) 
   ];
 
   return (
-    <div className="w-full bg-[#fafaff] text-slate-900 min-h-screen pb-16 font-['Manrope']">
+    <div className="w-full bg-[#fafaff] text-slate-900 min-h-screen pb-16">
       {/* Top Bar: Mission Header & Variable Selector Strip */}
       <section className="bg-white border-b border-purple-100 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 space-y-4">
@@ -194,7 +199,7 @@ export const InvestigatePage: React.FC<InvestigatePageProps> = ({ onNavigate }) 
                 <Globe className="w-3.5 h-3.5 text-purple-700" />
                 <span>GLOBAL EARTH SYSTEM TREND INVESTIGATION LAB</span>
               </div>
-              <h1 className="text-2xl sm:text-3xl font-black text-slate-950 font-['Space_Grotesk'] tracking-tight truncate">
+              <h1 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight truncate">
                 {isDistrictMode ? `${activeDistrict.name} District` : activeCountry.name} • {scientificResult.variableName}
               </h1>
               <p className="text-xs text-slate-500 font-mono">
@@ -216,7 +221,7 @@ export const InvestigatePage: React.FC<InvestigatePageProps> = ({ onNavigate }) 
 
               <button
                 onClick={() => setIsEvidenceDrawerOpen(true)}
-                className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm active:scale-95 shrink-0 font-['Space_Grotesk']"
+                className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm active:scale-95 shrink-0"
               >
                 <ShieldCheck className="w-4 h-4" />
                 <span>{t('evidence.viewEvidence')}</span>
@@ -336,7 +341,7 @@ export const InvestigatePage: React.FC<InvestigatePageProps> = ({ onNavigate }) 
                       }`}
                     >
                       <div className="min-w-0 pr-2">
-                        <div className="text-xs font-extrabold flex items-center gap-1.5 font-['Space_Grotesk'] truncate">
+                        <div className="text-xs font-extrabold flex items-center gap-1.5 truncate">
                           <span>{c.name}</span>
                           <span
                             className={`text-[9px] px-1.5 py-0.2 rounded font-mono shrink-0 ${
@@ -376,7 +381,7 @@ export const InvestigatePage: React.FC<InvestigatePageProps> = ({ onNavigate }) 
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-purple-600 animate-pulse" />
-                    <span className="text-[11px] font-extrabold text-purple-950 font-['Space_Grotesk']">
+                    <span className="text-[11px] font-extrabold text-purple-950">
                       Bangladesh Sub-District Model
                     </span>
                   </div>
@@ -478,20 +483,62 @@ export const InvestigatePage: React.FC<InvestigatePageProps> = ({ onNavigate }) 
             </div>
           </div>
 
-          {/* Center & Right Column: Interactive 3D EarthExplorer, Chart, and Scientific Evidence (8 cols) */}
+          {/* Center & Right Column: Interactive Google Maps / 3D Earth, Chart, and Scientific Evidence (8 cols) */}
           <div className="lg:col-span-8 space-y-6 min-w-0">
-            {/* Unified 3D Global Earth Instrument */}
-            <EarthExplorer
-              initialLevel={isDistrictMode ? 'district' : 'country'}
-              selectedCountryCode={activeCountry.code}
-              onSelectCountry={(code) => setSelectedCountryCode(code)}
-              selectedDistrictId={activeDistrict.id}
-              onSelectDistrict={(id) => setSelectedDistrictId(id)}
-              activeVariable={selectedVariable}
-              dataset={activeDataset}
-              heightClass="h-[460px] sm:h-[520px] lg:h-[560px]"
-              showInvestigationAction={false}
-            />
+            {/* Map Engine Selector */}
+            <div className="flex flex-wrap items-center justify-between gap-2 p-2 rounded-2xl bg-white border border-purple-100 shadow-xs">
+              <div className="flex items-center gap-1.5 p-1 rounded-xl bg-purple-50 border border-purple-200 text-xs font-mono">
+                <button
+                  onClick={() => setMapEngine('google')}
+                  className={`px-3 py-1 rounded-lg font-bold transition-all ${
+                    mapEngine === 'google'
+                      ? 'bg-purple-700 text-white shadow-xs'
+                      : 'text-purple-900 hover:text-purple-700'
+                  }`}
+                >
+                  Google Maps Live Layer
+                </button>
+                <button
+                  onClick={() => setMapEngine('globe')}
+                  className={`px-3 py-1 rounded-lg font-bold transition-all ${
+                    mapEngine === 'globe'
+                      ? 'bg-purple-700 text-white shadow-xs'
+                      : 'text-purple-900 hover:text-purple-700'
+                  }`}
+                >
+                  3D Satellite Globe
+                </button>
+              </div>
+
+              <span className="text-[11px] font-mono text-slate-500 pr-2">
+                Active Country: <strong className="text-slate-800">{activeCountry.name}</strong> • Variable: <strong className="text-purple-700 uppercase">{selectedVariable}</strong>
+              </span>
+            </div>
+
+            {/* Map Canvas */}
+            {mapEngine === 'google' ? (
+              <GoogleEarthMap
+                selectedCountryCode={activeCountry.code}
+                onSelectCountry={(code) => setSelectedCountryCode(code)}
+                activeVariable={selectedVariable}
+                onVariableChange={(v) => {
+                  if (v !== 'hot_humid') setSelectedVariable(v);
+                }}
+                heightClass="h-[460px] sm:h-[520px] lg:h-[560px]"
+              />
+            ) : (
+              <EarthExplorer
+                initialLevel={isDistrictMode ? 'district' : 'country'}
+                selectedCountryCode={activeCountry.code}
+                onSelectCountry={(code) => setSelectedCountryCode(code)}
+                selectedDistrictId={activeDistrict.id}
+                onSelectDistrict={(id) => setSelectedDistrictId(id)}
+                activeVariable={selectedVariable}
+                dataset={activeDataset}
+                heightClass="h-[460px] sm:h-[520px] lg:h-[560px]"
+                showInvestigationAction={false}
+              />
+            )}
 
             {/* Scientific Evidence Card: The Four Core Questions Results */}
             <div className="p-5 sm:p-6 rounded-2xl bg-white border border-purple-100 shadow-sm space-y-5 min-w-0">
@@ -500,12 +547,21 @@ export const InvestigatePage: React.FC<InvestigatePageProps> = ({ onNavigate }) 
                   <span className="text-[10px] font-mono tracking-widest uppercase text-purple-700 font-bold block">
                     DETERMINISTIC STATISTICAL ASSESSMENT
                   </span>
-                  <h3 className="text-lg font-black text-slate-900 mt-0.5 font-['Space_Grotesk'] truncate">
+                  <h3 className="text-lg font-black text-slate-900 mt-0.5 tracking-tight truncate">
                     {isDistrictMode ? activeDistrict.name : activeCountry.name} • {scientificResult.variableName}
                   </h3>
                 </div>
 
                 <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setIsAlertModalOpen(true)}
+                    className="px-2.5 py-1 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-900 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-2xs"
+                    title="Subscribe to email alert when this parameter crosses threshold"
+                  >
+                    <Bell className="w-3.5 h-3.5 text-amber-600 animate-pulse" />
+                    <span>Trend Alert</span>
+                  </button>
+
                   <span
                     className={`px-3 py-1 rounded-full text-xs font-mono font-bold ${
                       scientificResult.trend.significant
@@ -700,6 +756,14 @@ export const InvestigatePage: React.FC<InvestigatePageProps> = ({ onNavigate }) 
         isOpen={isEvidenceDrawerOpen}
         onClose={() => setIsEvidenceDrawerOpen(false)}
         result={scientificResult}
+      />
+
+      {/* Global Trend Alert Modal */}
+      <TrendAlertModal
+        isOpen={isAlertModalOpen}
+        onClose={() => setIsAlertModalOpen(false)}
+        defaultParameter={selectedVariable === 'solar' || selectedVariable === 'ndvi' ? 'lst' : selectedVariable}
+        defaultRegionCode={activeCountry.code}
       />
     </div>
   );

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { GlobTraceLogo } from './GlobTraceLogo';
+import { TrendAlertModal } from './TrendAlertModal';
 import {
   Compass,
   GitCompare,
@@ -12,10 +13,12 @@ import {
   Menu,
   X,
   Globe,
+  Layers,
   User,
   LogOut,
   ShieldCheck,
   Search,
+  Bell,
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -28,15 +31,16 @@ export const Navbar: React.FC<NavbarProps> = ({ currentRoute, onNavigate, onOpen
   const { language, toggleLanguage, t } = useLanguage();
   const { user, signOut, isAdmin } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [alertModalOpen, setAlertModalOpen] = useState(false);
 
   const navLinks = [
     { label: t('nav.home'), route: '/', icon: Globe },
     { label: t('nav.investigate'), route: '/investigate', icon: Compass },
+    { label: 'Atlas', route: '/atlas', icon: Layers },
     { label: t('nav.compare'), route: '/compare', icon: GitCompare },
     { label: t('nav.datasets'), route: '/datasets', icon: Database },
-    { label: t('nav.references'), route: '/references', icon: BookOpen },
-    { label: t('nav.about'), route: '/about', icon: Info },
     { label: t('nav.team'), route: '/team', icon: Users },
+    { label: t('nav.about'), route: '/about', icon: Info },
   ];
 
   const handleNav = (route: string) => {
@@ -91,6 +95,16 @@ export const Navbar: React.FC<NavbarProps> = ({ currentRoute, onNavigate, onOpen
               <Search className="w-4 h-4" />
             </button>
           )}
+
+          {/* Trend Alert Subscription Trigger */}
+          <button
+            onClick={() => setAlertModalOpen(true)}
+            className="px-2.5 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 text-xs font-semibold flex items-center gap-1.5 transition-all active:scale-95 shadow-2xs"
+            title="Subscribe to Ocean & Climate Critical Trend Alerts"
+          >
+            <Bell className="w-3.5 h-3.5 text-amber-600 animate-pulse" />
+            <span className="hidden sm:inline">{language === 'bn' ? 'ট্রেন্ড অ্যালার্ট' : 'Trend Alert'}</span>
+          </button>
 
           {/* Single Bilingual Toggle: EN / বাংলা */}
           <button
@@ -160,8 +174,25 @@ export const Navbar: React.FC<NavbarProps> = ({ currentRoute, onNavigate, onOpen
               </button>
             );
           })}
+          <button
+            onClick={() => {
+              setMobileMenuOpen(false);
+              setAlertModalOpen(true);
+            }}
+            className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200"
+          >
+            <Bell className="w-4 h-4 text-amber-600" />
+            <span>{language === 'bn' ? 'ট্রেন্ড অ্যালার্ট সাবস্ক্রিপশন' : 'Trend Alert Subscriptions'}</span>
+          </button>
         </div>
       )}
+
+      {/* Global Trend Alert Modal */}
+      <TrendAlertModal
+        isOpen={alertModalOpen}
+        onClose={() => setAlertModalOpen(false)}
+        defaultParameter="sst"
+      />
     </header>
   );
 };

@@ -100,7 +100,7 @@ export const AtlasPage: React.FC<AtlasPageProps> = ({ onNavigate }) => {
   };
 
   return (
-    <div className="w-full bg-[#fafaff] text-slate-900 min-h-screen py-10 font-['Manrope']">
+    <div className="w-full bg-[#fafaff] text-slate-900 min-h-screen py-10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
         {/* Header */}
         <div className="text-center max-w-3xl mx-auto space-y-2">
@@ -108,7 +108,7 @@ export const AtlasPage: React.FC<AtlasPageProps> = ({ onNavigate }) => {
             <Globe className="w-3.5 h-3.5" />
             <span>GLOBAL CHANGE ATLAS & TEMPORAL REPLAY</span>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight font-['Space_Grotesk']">
+          <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
             Global Planetary Environmental Atlas
           </h1>
           <p className="text-sm text-slate-600 leading-relaxed">
@@ -200,7 +200,7 @@ export const AtlasPage: React.FC<AtlasPageProps> = ({ onNavigate }) => {
 
               <div className="flex items-center gap-2">
                 <span className="text-slate-500 font-sans">Observation Year:</span>
-                <span className="text-base font-black text-purple-900 font-['Space_Grotesk']">
+                <span className="text-base font-black text-purple-900">
                   {currentYear}
                 </span>
                 <span className="text-[10px] text-slate-400 font-mono">
@@ -278,7 +278,7 @@ export const AtlasPage: React.FC<AtlasPageProps> = ({ onNavigate }) => {
                       <span className="text-[10px] text-slate-400 font-mono truncate">{c.region}</span>
                     </div>
 
-                    <h4 className="text-sm font-extrabold text-slate-900 font-['Space_Grotesk'] truncate">
+                    <h4 className="text-sm font-extrabold text-slate-900 truncate">
                       {c.name}
                     </h4>
                   </div>

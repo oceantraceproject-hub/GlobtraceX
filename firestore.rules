@@ -41,6 +41,11 @@ service cloud.firestore {
       match /savedComparisons/{comparisonId} {
         allow read, write: if isOwner(userId);
       }
+
+      // User trend alerts
+      match /trendAlerts/{alertId} {
+        allow read, write: if isOwner(userId);
+      }
     }
 
     // Team members (Public read for public profiles, write only by verified admin)

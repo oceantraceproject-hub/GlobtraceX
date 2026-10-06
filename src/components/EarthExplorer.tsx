@@ -870,7 +870,7 @@ export const EarthExplorer: React.FC<EarthExplorerProps> = ({
         <div className="absolute top-16 right-4 z-30 w-80 max-w-[90vw] bg-slate-950/95 backdrop-blur-xl border border-purple-500/40 rounded-3xl p-4 shadow-2xl text-white space-y-3 animate-in fade-in zoom-in-95 duration-200">
           <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
             <span className="text-xs font-mono uppercase tracking-wider text-purple-400 font-bold">
-              Global Country Registry (74 Supported)
+              Global Country Registry (73 Supported)
             </span>
             <button
               onClick={() => setIsSearchOpen(false)}

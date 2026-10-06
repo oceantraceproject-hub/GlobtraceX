@@ -37,7 +37,7 @@ export interface TrendStabilityAnalysis {
 }
 
 export interface DimensionFingerprint {
-  variableKey: 'lst' | 'rainfall' | 'ndvi' | 'tws' | 'solar';
+  variableKey: 'lst' | 'rainfall' | 'ndvi' | 'tws' | 'solar' | 'hot_humid';
   variableName: string;
   units: string;
   direction: 'increasing' | 'decreasing' | 'stable';

@@ -11,7 +11,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
   const { t } = useLanguage();
 
   return (
-    <footer className="w-full bg-[#fbfaff] text-slate-600 text-xs border-t border-purple-100 mt-auto font-['Manrope']">
+    <footer className="w-full bg-[#fbfaff] text-slate-600 text-xs border-t border-purple-100 mt-auto font-sans">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
           {/* Brand & Purpose */}

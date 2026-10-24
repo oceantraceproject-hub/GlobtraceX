@@ -23,7 +23,7 @@ export const AboutPage: React.FC<{ onNavigate: (route: string) => void }> = ({ o
             <Award className="w-3.5 h-3.5" />
             <span>NASA SPACE APPS CHALLENGE 2026 • CHALLENGE 02</span>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-black text-slate-950 tracking-tight font-['Space_Grotesk']">
+          <h1 className="text-3xl sm:text-4xl font-black text-slate-950 tracking-tight">
             About GlobTraceX
           </h1>
           <p className="text-purple-700 font-mono text-xs uppercase tracking-widest font-bold">
@@ -35,7 +35,7 @@ export const AboutPage: React.FC<{ onNavigate: (route: string) => void }> = ({ o
         <div className="bg-white rounded-2xl p-5 border border-purple-100 shadow-xs flex items-start gap-4">
           <ShieldCheck className="w-6 h-6 text-purple-600 shrink-0 mt-0.5" />
           <div className="text-xs space-y-1">
-            <h3 className="font-extrabold text-slate-900 font-['Space_Grotesk']">
+            <h3 className="font-extrabold text-slate-900">
               Official Student Project Charter
             </h3>
             <p className="text-slate-600 leading-relaxed font-sans">

@@ -58,7 +58,7 @@ export const EvidenceConstellation: React.FC<EvidenceConstellationProps> = ({
             <span className="text-[10px] font-mono tracking-widest uppercase text-purple-300 font-bold block">
               FUTURISTIC ANALYTICAL EVIDENCE CONSTELLATION
             </span>
-            <h3 className="text-sm font-black text-white font-['Space_Grotesk']">
+            <h3 className="text-sm font-black text-white">
               Multi-Signal Observational Topology • {countryName}
             </h3>
           </div>

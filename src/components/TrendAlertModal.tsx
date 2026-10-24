@@ -124,19 +124,19 @@ export const TrendAlertModal: React.FC<TrendAlertModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200 font-['Plus_Jakarta_Sans',sans-serif]">
-      <div className="w-full max-w-xl bg-slate-950 border border-purple-500/40 rounded-3xl p-6 sm:p-8 shadow-2xl text-white space-y-6 relative overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
+      <div className="w-full max-w-md bg-slate-950/95 border border-purple-500/30 rounded-2xl p-4 sm:p-5 shadow-2xl text-white space-y-4 relative overflow-hidden my-auto max-h-[92vh] flex flex-col">
         {/* Top Header */}
-        <div className="flex items-start justify-between border-b border-slate-800 pb-4">
-          <div className="space-y-1">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-400/30 text-[10px] font-mono font-bold uppercase tracking-wider">
-              <Bell className="w-3 h-3 text-purple-400" />
+        <div className="flex items-start justify-between border-b border-slate-800/80 pb-3">
+          <div className="space-y-0.5">
+            <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-300 border border-purple-400/25 text-[9px] font-mono font-bold uppercase tracking-wider">
+              <Bell className="w-2.5 h-2.5 text-purple-400" />
               <span>{isBn ? 'স্বয়ংক্রিয় পরিবেশগত সতর্কতা' : 'AUTOMATED TREND ALERT SYSTEM'}</span>
             </div>
-            <h3 className="text-xl sm:text-2xl font-black text-white font-['Syne',sans-serif] tracking-tight">
+            <h3 className="text-base sm:text-lg font-bold text-white tracking-tight">
               {isBn ? 'প্রবণতা সতর্কতা সাবস্ক্রিপশন' : 'Trend Threshold Subscriptions'}
             </h3>
-            <p className="text-xs text-slate-400">
+            <p className="text-[11px] text-slate-400">
               {isBn
                 ? 'নাসার উপাত্ত যখন সংকটজনক জলবায়ু ও সামুদ্রিক সীমা অতিক্রম করবে তখন তাৎক্ষণিক নোটিফিকেশন পান।'
                 : 'Receive automated notifications when verified Earth and ocean parameters cross critical thresholds.'}
@@ -145,27 +145,27 @@ export const TrendAlertModal: React.FC<TrendAlertModalProps> = ({
 
           <button
             onClick={onClose}
-            className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors shrink-0"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Tabs: Create vs Subscriptions */}
-        <div className="flex items-center gap-2 p-1 rounded-2xl bg-slate-900 border border-slate-800 text-xs font-mono">
+        <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-900 border border-slate-800/80 text-[11px] font-mono shrink-0">
           <button
             onClick={() => setActiveTab('create')}
-            className={`flex-1 py-2 px-3 rounded-xl font-bold transition-all ${
+            className={`flex-1 py-1.5 px-2.5 rounded-lg font-bold transition-all ${
               activeTab === 'create'
                 ? 'bg-purple-600 text-white shadow-xs'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            {isBn ? '+ নতুন সতর্কতা তৈরি করুন' : '+ Set New Threshold Alert'}
+            {isBn ? '+ নতুন সতর্কতা' : '+ Set Threshold Alert'}
           </button>
           <button
             onClick={() => setActiveTab('subscriptions')}
-            className={`flex-1 py-2 px-3 rounded-xl font-bold transition-all flex items-center justify-center gap-1.5 ${
+            className={`flex-1 py-1.5 px-2.5 rounded-lg font-bold transition-all flex items-center justify-center gap-1.5 ${
               activeTab === 'subscriptions'
                 ? 'bg-purple-600 text-white shadow-xs'
                 : 'text-slate-400 hover:text-white'
@@ -180,16 +180,16 @@ export const TrendAlertModal: React.FC<TrendAlertModalProps> = ({
 
         {/* Tab 1: Create Form */}
         {activeTab === 'create' && (
-          <form onSubmit={handleSubmit} className="space-y-4 text-xs font-mono">
+          <form onSubmit={handleSubmit} className="space-y-3 text-xs font-mono overflow-y-auto pr-0.5">
             {/* Target Region */}
             <div className="space-y-1">
               <label className="text-[10px] text-slate-400 uppercase block font-sans">
-                {isBn ? 'ভৌগোলিক অঞ্চল / দেশ নির্বাচন (৭৩টি সমর্থিত)' : 'Target Region / Sovereign Nation (73 Supported)'}
+                {isBn ? 'ভৌগোলিক অঞ্চল / দেশ নির্বাচন (৭৩টি সমর্থিত)' : 'Target Region / Nation (73 Supported)'}
               </label>
               <select
                 value={selectedRegionCode}
                 onChange={(e) => setSelectedRegionCode(e.target.value)}
-                className="w-full p-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs font-bold font-mono focus:border-purple-500 focus:outline-none"
+                className="w-full py-2 px-2.5 rounded-xl bg-slate-900 border border-slate-700/80 text-white text-[11px] font-bold font-mono focus:border-purple-500 focus:outline-none"
               >
                 {GLOBAL_COUNTRIES.map((c) => (
                   <option key={c.code} value={c.code}>
@@ -207,7 +207,7 @@ export const TrendAlertModal: React.FC<TrendAlertModalProps> = ({
               <select
                 value={selectedParamId}
                 onChange={(e) => setSelectedParamId(e.target.value as TrendAlert['parameter'])}
-                className="w-full p-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs font-bold font-mono focus:border-purple-500 focus:outline-none"
+                className="w-full py-2 px-2.5 rounded-xl bg-slate-900 border border-slate-700/80 text-white text-[11px] font-bold font-mono focus:border-purple-500 focus:outline-none"
               >
                 {ALERT_PARAMETERS.map((p) => (
                   <option key={p.id} value={p.id}>
@@ -215,13 +215,13 @@ export const TrendAlertModal: React.FC<TrendAlertModalProps> = ({
                   </option>
                 ))}
               </select>
-              <p className="text-[10px] text-slate-400 font-sans italic pt-0.5">
+              <p className="text-[10px] text-slate-400 font-sans italic pt-0.5 line-clamp-2">
                 {isBn ? currentParamConfig.scientificContextBn : currentParamConfig.scientificContext}
               </p>
             </div>
 
             {/* Threshold Condition and Value */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-2.5">
               <div className="space-y-1">
                 <label className="text-[10px] text-slate-400 uppercase block font-sans">
                   {isBn ? 'সতর্কতার শর্ত' : 'Trigger Condition'}
@@ -229,7 +229,7 @@ export const TrendAlertModal: React.FC<TrendAlertModalProps> = ({
                 <select
                   value={condition}
                   onChange={(e) => setCondition(e.target.value as 'above' | 'below')}
-                  className="w-full p-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs font-bold font-mono focus:border-purple-500 focus:outline-none"
+                  className="w-full py-2 px-2.5 rounded-xl bg-slate-900 border border-slate-700/80 text-white text-[11px] font-bold font-mono focus:border-purple-500 focus:outline-none"
                 >
                   <option value="above">{isBn ? 'সীমা অতিক্রম করলে (≥)' : 'Crosses Above (≥)'}</option>
                   <option value="below">{isBn ? 'সীমার নিচে নামলে (≤)' : 'Drops Below (≤)'}</option>
@@ -238,7 +238,7 @@ export const TrendAlertModal: React.FC<TrendAlertModalProps> = ({
 
               <div className="space-y-1">
                 <label className="text-[10px] text-slate-400 uppercase block font-sans">
-                  {isBn ? `সংকটজনক মান (${currentParamConfig.unit})` : `Critical Threshold (${currentParamConfig.unit})`}
+                  {isBn ? `সংকটজনক মান (${currentParamConfig.unit})` : `Threshold (${currentParamConfig.unit})`}
                 </label>
                 <input
                   type="number"
@@ -247,65 +247,65 @@ export const TrendAlertModal: React.FC<TrendAlertModalProps> = ({
                   max={currentParamConfig.max}
                   value={thresholdValue}
                   onChange={(e) => setThresholdValue(parseFloat(e.target.value) || 0)}
-                  className="w-full p-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs font-bold font-mono focus:border-purple-500 focus:outline-none"
+                  className="w-full py-2 px-2.5 rounded-xl bg-slate-900 border border-slate-700/80 text-white text-[11px] font-bold font-mono focus:border-purple-500 focus:outline-none"
                 />
               </div>
             </div>
 
             {/* Email and Frequency */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               <div className="space-y-1">
                 <label className="text-[10px] text-slate-400 uppercase block font-sans">
-                  {isBn ? 'প্রাপকের ইমেইল ঠিকানা *' : 'Notification Email *'}
+                  {isBn ? 'ইমেইল ঠিকানা *' : 'Email Address *'}
                 </label>
                 <div className="relative">
-                  <Mail className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <Mail className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                   <input
                     type="email"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="researcher@university.edu"
-                    className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs font-mono placeholder-slate-500 focus:border-purple-500 focus:outline-none"
+                    className="w-full pl-8 pr-2.5 py-2 rounded-xl bg-slate-900 border border-slate-700/80 text-white text-[11px] font-mono placeholder-slate-500 focus:border-purple-500 focus:outline-none"
                   />
                 </div>
               </div>
 
               <div className="space-y-1">
                 <label className="text-[10px] text-slate-400 uppercase block font-sans">
-                  {isBn ? 'বিজ্ঞপ্তি প্রেরণের ব্যবধান' : 'Delivery Frequency'}
+                  {isBn ? 'বিজ্ঞপ্তি ব্যবধান' : 'Delivery Frequency'}
                 </label>
                 <select
                   value={frequency}
                   onChange={(e) => setFrequency(e.target.value as TrendAlert['frequency'])}
-                  className="w-full p-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs font-bold font-mono focus:border-purple-500 focus:outline-none"
+                  className="w-full py-2 px-2.5 rounded-xl bg-slate-900 border border-slate-700/80 text-white text-[11px] font-bold font-mono focus:border-purple-500 focus:outline-none"
                 >
                   <option value="instant">{isBn ? 'তাৎক্ষণিক এলার্ট' : 'Instant Alert on Anomaly'}</option>
-                  <option value="weekly_digest">{isBn ? 'সাপ্তাহিক সংক্ষিপ্ত বিবরণী' : 'Weekly Climatology Digest'}</option>
-                  <option value="monthly_summary">{isBn ? 'মাসিক পূর্ণাঙ্গ প্রতিবেদন' : 'Monthly Trend Summary'}</option>
+                  <option value="weekly_digest">{isBn ? 'সাপ্তাহিক সারসংক্ষেপ' : 'Weekly Climatology Digest'}</option>
+                  <option value="monthly_summary">{isBn ? 'মাসিক প্রতিবেদন' : 'Monthly Trend Summary'}</option>
                 </select>
               </div>
             </div>
 
             {/* Success message banner */}
             {successMessage && (
-              <div className="p-3 rounded-2xl bg-emerald-950/50 border border-emerald-500/40 text-emerald-300 text-xs flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+              <div className="p-2.5 rounded-xl bg-emerald-950/50 border border-emerald-500/40 text-emerald-300 text-[11px] flex items-center gap-2">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                 <span>{successMessage}</span>
               </div>
             )}
 
             {/* Submit button */}
-            <div className="pt-2">
+            <div className="pt-1">
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full py-3.5 px-5 rounded-2xl bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 active:scale-98 font-mono"
+                className="w-full py-2.5 px-4 rounded-xl bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 active:scale-98 font-mono"
               >
-                <Bell className="w-4 h-4 text-purple-200" />
+                <Bell className="w-3.5 h-3.5 text-purple-200" />
                 <span>
                   {isSubmitting
-                    ? (isBn ? 'সতর্কতা সক্রিয় করা হচ্ছে...' : 'Activating Threshold Subscription...')
+                    ? (isBn ? 'সতর্কতা সক্রিয় করা হচ্ছে...' : 'Activating Subscription...')
                     : (isBn ? 'সতর্কতা সাবস্ক্রিপশন সম্পন্ন করুন' : 'Activate Trend Alert Subscription')}
                 </span>
               </button>
@@ -315,53 +315,53 @@ export const TrendAlertModal: React.FC<TrendAlertModalProps> = ({
 
         {/* Tab 2: Existing Subscriptions */}
         {activeTab === 'subscriptions' && (
-          <div className="space-y-3">
+          <div className="space-y-2.5 overflow-y-auto max-h-60 pr-0.5">
             {existingAlerts.length === 0 ? (
-              <div className="text-center py-8 text-slate-400 text-xs space-y-2">
-                <Bell className="w-8 h-8 mx-auto text-slate-600 opacity-60" />
-                <p>{isBn ? 'বর্তমানে কোনো সক্রিয় সতর্কতা সাবস্ক্রিপশন নেই।' : 'No active threshold subscriptions registered.'}</p>
+              <div className="text-center py-6 text-slate-400 text-xs space-y-2">
+                <Bell className="w-6 h-6 mx-auto text-slate-600 opacity-60" />
+                <p>{isBn ? 'বর্তমানে কোনো সক্রিয় সতর্কতা নেই।' : 'No active threshold subscriptions.'}</p>
                 <button
                   onClick={() => setActiveTab('create')}
-                  className="px-4 py-2 rounded-xl bg-purple-600 text-white font-mono text-xs font-bold"
+                  className="px-3 py-1.5 rounded-lg bg-purple-600 text-white font-mono text-xs font-bold"
                 >
                   {isBn ? 'প্রথম সতর্কতা তৈরি করুন' : 'Create First Alert'}
                 </button>
               </div>
             ) : (
-              <div className="max-h-72 overflow-y-auto space-y-2 pr-1">
+              <div className="space-y-2">
                 {existingAlerts.map((alert) => (
                   <div
                     key={alert.id}
-                    className={`p-3.5 rounded-2xl border transition-all flex items-center justify-between gap-3 text-xs font-mono ${
+                    className={`p-2.5 rounded-xl border transition-all flex items-center justify-between gap-2.5 text-xs font-mono ${
                       alert.active
                         ? 'bg-slate-900 border-purple-800/40 text-white'
                         : 'bg-slate-900/40 border-slate-800 text-slate-400 opacity-60'
                     }`}
                   >
                     <div className="space-y-0.5 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-extrabold text-white text-sm">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-white text-xs truncate">
                           {alert.parameterLabel}
                         </span>
-                        <span className="text-[10px] px-2 py-0.2 rounded-full bg-purple-900/60 text-purple-300 border border-purple-700">
+                        <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-purple-900/60 text-purple-300 border border-purple-700">
                           {alert.condition === 'above' ? '≥' : '≤'} {alert.thresholdValue} {alert.unit}
                         </span>
                       </div>
-                      <div className="text-[11px] text-slate-400 truncate">
-                        Region: <strong className="text-slate-300">{alert.targetRegionName}</strong> • Email: <strong className="text-slate-300">{alert.email}</strong>
+                      <div className="text-[10px] text-slate-400 truncate">
+                        {alert.targetRegionName} • {alert.email}
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-1.5 shrink-0">
                       <button
                         onClick={() => handleToggleAlert(alert.id)}
                         className="p-1 rounded text-purple-400 hover:text-white"
                         title={alert.active ? 'Deactivate Alert' : 'Activate Alert'}
                       >
                         {alert.active ? (
-                          <ToggleRight className="w-5 h-5 text-emerald-400" />
+                          <ToggleRight className="w-4 h-4 text-emerald-400" />
                         ) : (
-                          <ToggleLeft className="w-5 h-5 text-slate-500" />
+                          <ToggleLeft className="w-4 h-4 text-slate-500" />
                         )}
                       </button>
 
@@ -370,7 +370,7 @@ export const TrendAlertModal: React.FC<TrendAlertModalProps> = ({
                         className="p-1 rounded text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 transition-colors"
                         title="Delete Subscription"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </div>

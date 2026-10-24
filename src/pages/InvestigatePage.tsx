@@ -22,10 +22,17 @@ import {
   ScientificObservation,
 } from '../compute/globTraceScience';
 import { EarthExplorer } from '../components/EarthExplorer';
-import { GoogleEarthMap } from '../components/GoogleEarthMap';
 import { GlobTraceChart } from '../components/GlobTraceChart';
 import { EvidenceDrawer } from '../components/EvidenceDrawer';
 import { TrendAlertModal } from '../components/TrendAlertModal';
+import { LiveIntelligencePanel } from '../components/LiveIntelligencePanel';
+import { AnalysisRecommendationsModal } from '../components/AnalysisRecommendationsModal';
+import { AnalysisUpdateNotification } from '../components/AnalysisUpdateNotification';
+import {
+  generateDeterministicIntelligence,
+  LiveEarthIntelligence,
+} from '../services/intelligenceEngine';
+import { fetchEnhancedIntelligence } from '../services/aiIntelligence';
 import {
   MapPin,
   Thermometer,
@@ -75,7 +82,6 @@ export const InvestigatePage: React.FC<InvestigatePageProps> = ({ onNavigate }) 
   const [useAnomalies, setUseAnomalies] = useState<boolean>(true);
   const [isEvidenceDrawerOpen, setIsEvidenceDrawerOpen] = useState<boolean>(false);
   const [isAlertModalOpen, setIsAlertModalOpen] = useState<boolean>(false);
-  const [mapEngine, setMapEngine] = useState<'google' | 'globe'>('google');
 
   // Active country object
   const activeCountry: GlobalCountry = useMemo(() => {
@@ -143,6 +149,89 @@ export const InvestigatePage: React.FC<InvestigatePageProps> = ({ onNavigate }) 
       setIsDistrictMode(false);
     }
   }, [activeCountry.code]);
+
+  // Live Earth Intelligence & Adaptive Recommendations State
+  const [isAnalysisModalOpen, setIsAnalysisModalOpen] = useState<boolean>(false);
+  const [updateNotificationKey, setUpdateNotificationKey] = useState<number>(0);
+  const [liveIntelligence, setLiveIntelligence] = useState<LiveEarthIntelligence>(() => {
+    return generateDeterministicIntelligence({
+      regionId: 'BD',
+      regionName: 'Bangladesh',
+      indicatorId: 'lst',
+      period: { start: '2000-03', end: '2026-06', totalMonths: 316 },
+      observations: { totalExpected: 316, validCount: 308, missingCount: 8, coveragePct: 97.5 },
+      theilSenSlopePerDecade: 0.28,
+      senConfidenceInterval95: [0.18, 0.38],
+      mannKendallZ: 4.82,
+      mannKendallPValue: 0.001,
+      isSignificant: true,
+      netChangePct: 3.4,
+    });
+  });
+
+  // Reactive Re-Analysis Pipeline: updates deterministically immediately on any change,
+  // then seamlessly enhances qualitative narrative via Gemini 3.8 Flash in background
+  useEffect(() => {
+    const regionId = isDistrictMode && activeCountry.code === 'BD' ? activeDistrict.id : activeCountry.code;
+    const regionName = isDistrictMode && activeCountry.code === 'BD' ? `${activeDistrict.name} District` : activeCountry.name;
+
+    const deterministic = generateDeterministicIntelligence({
+      regionId,
+      regionName,
+      divisionOrContinent: isDistrictMode && activeCountry.code === 'BD' ? activeDistrict.divisionName : activeCountry.continent,
+      indicatorId: selectedVariable,
+      period: {
+        start: scientificResult.period.start,
+        end: scientificResult.period.end,
+        totalMonths: scientificResult.period.totalMonths,
+      },
+      observations: {
+        totalExpected: scientificResult.n_observations.totalExpected,
+        validCount: scientificResult.n_observations.validCount,
+        missingCount: scientificResult.n_observations.missingCount,
+        coveragePct: scientificResult.n_observations.coverage_percent,
+      },
+      theilSenSlopePerDecade: scientificResult.slope.valuePerDecade,
+      theilSenSlopeAnnual: scientificResult.slope.value,
+      senConfidenceInterval95: [scientificResult.slope.ci_low, scientificResult.slope.ci_high],
+      mannKendallZ: scientificResult.trend.mannKendallZ,
+      mannKendallPValue: scientificResult.trend.p_value,
+      isSignificant: scientificResult.trend.significant,
+      netChangePct: scientificResult.magnitude.percentChange,
+      baselinePeriod: activeDataset.temporal_coverage.start + '–' + '2020 Climatology',
+      earlyPeriodSlope: scientificResult.trendStability?.subPeriods?.[0]?.slopePerDecade,
+      recentPeriodSlope: scientificResult.trendStability?.subPeriods?.[2]?.slopePerDecade,
+    });
+
+    setLiveIntelligence(deterministic);
+    setUpdateNotificationKey((k) => k + 1);
+
+    // Debounced asynchronous AI enhancement with request cancellation
+    const abortController = new AbortController();
+    const timer = setTimeout(async () => {
+      try {
+        const enhanced = await fetchEnhancedIntelligence(deterministic, abortController.signal);
+        setLiveIntelligence(enhanced);
+      } catch {
+        // Fallback remains active
+      }
+    }, 200);
+
+    return () => {
+      clearTimeout(timer);
+      abortController.abort();
+    };
+  }, [
+    isDistrictMode,
+    activeCountry.code,
+    activeCountry.name,
+    activeDistrict.id,
+    activeDistrict.name,
+    selectedVariable,
+    useAnomalies,
+    scientificResult,
+    activeDataset,
+  ]);
 
   // 5 NASA Observational Variables
   const variableTabs = [
@@ -270,6 +359,12 @@ export const InvestigatePage: React.FC<InvestigatePageProps> = ({ onNavigate }) 
 
       {/* Main Workstation Layout */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 space-y-6">
+        {/* Prominent Live Earth Intelligence Panel at the Top */}
+        <LiveIntelligencePanel
+          intelligence={liveIntelligence}
+          onOpenAnalysisModal={() => setIsAnalysisModalOpen(true)}
+        />
+
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* Left Column: Geographic Country Registry & Administrative Filters (4 cols) */}
           <div className="lg:col-span-4 space-y-4">
@@ -483,62 +578,37 @@ export const InvestigatePage: React.FC<InvestigatePageProps> = ({ onNavigate }) 
             </div>
           </div>
 
-          {/* Center & Right Column: Interactive Google Maps / 3D Earth, Chart, and Scientific Evidence (8 cols) */}
+          {/* Center & Right Column: Interactive 3D Earth, Chart, and Scientific Evidence (8 cols) */}
           <div className="lg:col-span-8 space-y-6 min-w-0">
-            {/* Map Engine Selector */}
-            <div className="flex flex-wrap items-center justify-between gap-2 p-2 rounded-2xl bg-white border border-purple-100 shadow-xs">
-              <div className="flex items-center gap-1.5 p-1 rounded-xl bg-purple-50 border border-purple-200 text-xs font-mono">
-                <button
-                  onClick={() => setMapEngine('google')}
-                  className={`px-3 py-1 rounded-lg font-bold transition-all ${
-                    mapEngine === 'google'
-                      ? 'bg-purple-700 text-white shadow-xs'
-                      : 'text-purple-900 hover:text-purple-700'
-                  }`}
-                >
-                  Google Maps Live Layer
-                </button>
-                <button
-                  onClick={() => setMapEngine('globe')}
-                  className={`px-3 py-1 rounded-lg font-bold transition-all ${
-                    mapEngine === 'globe'
-                      ? 'bg-purple-700 text-white shadow-xs'
-                      : 'text-purple-900 hover:text-purple-700'
-                  }`}
-                >
-                  3D Satellite Globe
-                </button>
+            {/* 3D Earth System Header & Status Bar */}
+            <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-2xl bg-white border border-purple-100 shadow-xs">
+              <div className="flex items-center gap-2 text-xs font-mono">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-purple-100/80 text-purple-900 font-bold border border-purple-200">
+                  <Globe className="w-3.5 h-3.5 text-purple-700" />
+                  3D Interactive Earth System
+                </span>
+                <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200">
+                  Procedural WebGL
+                </span>
               </div>
 
               <span className="text-[11px] font-mono text-slate-500 pr-2">
-                Active Country: <strong className="text-slate-800">{activeCountry.name}</strong> • Variable: <strong className="text-purple-700 uppercase">{selectedVariable}</strong>
+                Active Region: <strong className="text-slate-800">{activeCountry.name}</strong> • Variable: <strong className="text-purple-700 uppercase">{selectedVariable}</strong>
               </span>
             </div>
 
-            {/* Map Canvas */}
-            {mapEngine === 'google' ? (
-              <GoogleEarthMap
-                selectedCountryCode={activeCountry.code}
-                onSelectCountry={(code) => setSelectedCountryCode(code)}
-                activeVariable={selectedVariable}
-                onVariableChange={(v) => {
-                  if (v !== 'hot_humid') setSelectedVariable(v);
-                }}
-                heightClass="h-[460px] sm:h-[520px] lg:h-[560px]"
-              />
-            ) : (
-              <EarthExplorer
-                initialLevel={isDistrictMode ? 'district' : 'country'}
-                selectedCountryCode={activeCountry.code}
-                onSelectCountry={(code) => setSelectedCountryCode(code)}
-                selectedDistrictId={activeDistrict.id}
-                onSelectDistrict={(id) => setSelectedDistrictId(id)}
-                activeVariable={selectedVariable}
-                dataset={activeDataset}
-                heightClass="h-[460px] sm:h-[520px] lg:h-[560px]"
-                showInvestigationAction={false}
-              />
-            )}
+            {/* Earth Explorer 3D Canvas */}
+            <EarthExplorer
+              initialLevel={isDistrictMode ? 'district' : 'country'}
+              selectedCountryCode={activeCountry.code}
+              onSelectCountry={(code) => setSelectedCountryCode(code)}
+              selectedDistrictId={activeDistrict.id}
+              onSelectDistrict={(id) => setSelectedDistrictId(id)}
+              activeVariable={selectedVariable}
+              dataset={activeDataset}
+              heightClass="h-[460px] sm:h-[520px] lg:h-[560px]"
+              showInvestigationAction={false}
+            />
 
             {/* Scientific Evidence Card: The Four Core Questions Results */}
             <div className="p-5 sm:p-6 rounded-2xl bg-white border border-purple-100 shadow-sm space-y-5 min-w-0">
@@ -614,7 +684,7 @@ export const InvestigatePage: React.FC<InvestigatePageProps> = ({ onNavigate }) 
 
               {/* The Seven Core Scientific Questions Answered Directly */}
               <div className="p-4 rounded-xl bg-purple-50/50 border border-purple-100 space-y-2.5 text-xs">
-                <div className="font-extrabold text-purple-900 font-['Space_Grotesk'] text-sm">
+                <div className="font-extrabold text-purple-900 text-sm">
                   The Planetary Trend Questions Answered:
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-slate-700">
@@ -643,7 +713,7 @@ export const InvestigatePage: React.FC<InvestigatePageProps> = ({ onNavigate }) 
             {/* Scientific Chart: 26-Year Observation Record & Theil-Sen Line */}
             <div className="space-y-2">
               <div className="flex items-center justify-between px-1">
-                <h4 className="text-sm font-extrabold text-slate-900 font-['Space_Grotesk']">
+                <h4 className="text-sm font-extrabold text-slate-900">
                   26-Year Continuous Observation Time Series (2000–2026)
                 </h4>
                 <div className="flex items-center gap-2">
@@ -673,7 +743,7 @@ export const InvestigatePage: React.FC<InvestigatePageProps> = ({ onNavigate }) 
                   <span className="text-[10px] font-mono text-slate-400">5 NASA Observables</span>
                 </div>
 
-                <h4 className="text-sm font-extrabold text-slate-900 font-['Space_Grotesk']">
+                <h4 className="text-sm font-extrabold text-slate-900">
                   Co-occurring Signals for {isDistrictMode ? activeDistrict.name : activeCountry.name}
                 </h4>
 
@@ -764,6 +834,20 @@ export const InvestigatePage: React.FC<InvestigatePageProps> = ({ onNavigate }) 
         onClose={() => setIsAlertModalOpen(false)}
         defaultParameter={selectedVariable === 'solar' || selectedVariable === 'ndvi' ? 'lst' : selectedVariable}
         defaultRegionCode={activeCountry.code}
+      />
+
+      {/* Comprehensive Analysis & Recommendations Modal */}
+      <AnalysisRecommendationsModal
+        isOpen={isAnalysisModalOpen}
+        onClose={() => setIsAnalysisModalOpen(false)}
+        intelligence={liveIntelligence}
+      />
+
+      {/* Unobtrusive Update Notification Toast */}
+      <AnalysisUpdateNotification
+        regionName={liveIntelligence.regionName}
+        variableName={liveIntelligence.indicator.shortName}
+        updateKey={updateNotificationKey}
       />
     </div>
   );

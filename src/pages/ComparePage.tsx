@@ -74,7 +74,7 @@ export const ComparePage: React.FC = () => {
   ];
 
   return (
-    <div className="w-full bg-[#fafaff] text-slate-900 min-h-screen py-10 font-['Manrope']">
+    <div className="w-full bg-[#fafaff] text-slate-900 min-h-screen py-10 font-sans">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
         {/* Page Header */}
         <div className="text-center max-w-3xl mx-auto space-y-3">
@@ -82,7 +82,7 @@ export const ComparePage: React.FC = () => {
             <GitCompare className="w-3.5 h-3.5 text-purple-700" />
             <span>GLOBAL DUAL-ENTITY STATISTICAL COMPARISON</span>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-black text-slate-950 tracking-tight font-['Space_Grotesk'] break-words">
+          <h1 className="text-3xl sm:text-4xl font-black text-slate-950 tracking-tight break-words">
             {t('compare.title')}
           </h1>
           <p className="text-sm text-slate-600 leading-relaxed font-sans">
@@ -261,7 +261,7 @@ export const ComparePage: React.FC = () => {
                   <span className="text-[10px] font-mono text-purple-700 font-bold uppercase block truncate">
                     PRIMARY ENTITY (A)
                   </span>
-                  <h3 className="text-xl font-black text-slate-900 font-['Space_Grotesk'] truncate">
+                  <h3 className="text-xl font-black text-slate-900 truncate">
                     {comparisonMode === 'countries' ? countryA.name : districtA.name}
                   </h3>
                 </div>
@@ -332,7 +332,7 @@ export const ComparePage: React.FC = () => {
                   <span className="text-[10px] font-mono text-purple-700 font-bold uppercase block truncate">
                     COMPARISON ENTITY (B)
                   </span>
-                  <h3 className="text-xl font-black text-slate-900 font-['Space_Grotesk'] truncate">
+                  <h3 className="text-xl font-black text-slate-900 truncate">
                     {comparisonMode === 'countries' ? countryB.name : districtB.name}
                   </h3>
                 </div>

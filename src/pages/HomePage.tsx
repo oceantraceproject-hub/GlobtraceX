@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { EarthExplorer } from '../components/EarthExplorer';
-import { GoogleEarthMap } from '../components/GoogleEarthMap';
 import { CapabilityCircle } from '../components/CapabilityCircle';
 import { TrendAlertModal } from '../components/TrendAlertModal';
 import { NASA_DATASET_REGISTRY } from '../data/nasaRegistry';
@@ -37,7 +36,6 @@ interface HomePageProps {
 export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
   const { language, t } = useLanguage();
   const [activeQuestion, setActiveQuestion] = useState<number>(0);
-  const [mapEngine, setMapEngine] = useState<'google' | 'globe'>('google');
   const [isAlertModalOpen, setIsAlertModalOpen] = useState<boolean>(false);
 
   const questions = [
@@ -143,55 +141,34 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
               </div>
             </div>
 
-            {/* Right Column: Unified Interactive Map Experience (Google Maps + Satellite Switcher) */}
+            {/* Right Column: Custom Interactive 3D Earth Experience */}
             <div className="lg:col-span-7 flex flex-col justify-center min-w-0">
               <div className="p-2 sm:p-3 bg-white rounded-3xl shadow-xl border border-purple-100/90 space-y-2">
-                {/* Engine Selector */}
+                {/* 3D Earth System Header */}
                 <div className="flex items-center justify-between px-2 pt-1 text-xs font-mono">
-                  <div className="flex items-center gap-1.5 p-1 rounded-xl bg-purple-50 border border-purple-200">
-                    <button
-                      onClick={() => setMapEngine('google')}
-                      className={`px-3 py-1 rounded-lg font-bold transition-all ${
-                        mapEngine === 'google'
-                          ? 'bg-purple-700 text-white shadow-xs'
-                          : 'text-purple-900 hover:text-purple-700'
-                      }`}
-                    >
-                      Google Maps Live
-                    </button>
-                    <button
-                      onClick={() => setMapEngine('globe')}
-                      className={`px-3 py-1 rounded-lg font-bold transition-all ${
-                        mapEngine === 'globe'
-                          ? 'bg-purple-700 text-white shadow-xs'
-                          : 'text-purple-900 hover:text-purple-700'
-                      }`}
-                    >
-                      3D Satellite Globe
-                    </button>
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-purple-100/80 text-purple-900 font-bold border border-purple-200">
+                      <Globe className="w-3.5 h-3.5 text-purple-700" />
+                      Interactive 3D Earth System
+                    </span>
+                    <span className="text-[11px] text-slate-500 hidden sm:inline">
+                      73 Sovereign Nations • 5 Satellite Indicators
+                    </span>
                   </div>
-
-                  <span className="text-[11px] text-slate-500 hidden sm:inline">
-                    73 Sovereign Nations • 5 Layers
+                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200">
+                    Procedural 3D WebGL
                   </span>
                 </div>
 
-                {mapEngine === 'google' ? (
-                  <GoogleEarthMap
-                    heightClass="h-[440px] sm:h-[500px] lg:h-[530px]"
-                    onNavigateToInvestigate={(code) => onNavigate('/investigate')}
-                  />
-                ) : (
-                  <EarthExplorer
-                    initialLevel="south-asia"
-                    onNavigateToInvestigate={() => onNavigate('/investigate')}
-                    heightClass="h-[440px] sm:h-[500px] lg:h-[530px]"
-                    showInvestigationAction={true}
-                  />
-                )}
+                <EarthExplorer
+                  initialLevel="south-asia"
+                  onNavigateToInvestigate={() => onNavigate('/investigate')}
+                  heightClass="h-[440px] sm:h-[500px] lg:h-[530px]"
+                  showInvestigationAction={true}
+                />
 
                 <div className="px-3 py-1 flex items-center justify-between text-xs text-slate-500 font-mono">
-                  <span className="truncate">Synchronized Google Maps &amp; NASA GIBS Satellite Base Layer</span>
+                  <span className="truncate">Procedural 3D Vector Geometry • 73 Sovereign Nations</span>
                   <button
                     onClick={() => onNavigate('/investigate')}
                     className="text-purple-700 font-bold hover:underline shrink-0 ml-2"
@@ -201,6 +178,39 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Live Earth Intelligence Feature Strip */}
+      <section className="bg-white border-b border-purple-100 py-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-950 text-white shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <span className="flex h-2 w-2 relative">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
+                </span>
+                <span className="text-[11px] font-mono font-bold text-purple-300 tracking-wider uppercase">
+                  NEW • LIVE EARTH INTELLIGENCE &amp; ADAPTIVE RECOMMENDATIONS
+                </span>
+              </div>
+              <h3 className="text-lg sm:text-xl font-black text-white tracking-tight">
+                Data First, AI Second: Automated Planetary Trend Diagnostics
+              </h3>
+              <p className="text-xs sm:text-sm text-purple-200/90 max-w-2xl leading-relaxed">
+                Interprets satellite telemetry across 73 countries and 5 NASA sensors in real time. Automatically delivers prioritized immediate, medium-term, and strategic recommendations whenever parameters shift.
+              </p>
+            </div>
+
+            <button
+              onClick={() => onNavigate('/investigate')}
+              className="px-5 py-3 rounded-2xl bg-white hover:bg-purple-50 text-purple-950 font-bold text-xs font-mono transition-all flex items-center gap-2 shrink-0 active:scale-95 shadow-md"
+            >
+              <span>Explore Live Intelligence Lab</span>
+              <ArrowRight className="w-4 h-4 text-purple-700" />
+            </button>
           </div>
         </div>
       </section>

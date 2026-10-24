@@ -579,7 +579,7 @@ export const ThreeEarthGlobe: React.FC<ThreeEarthGlobeProps> = ({
       {onSelectBangladesh && (
         <button
           onClick={onSelectBangladesh}
-          className="absolute bottom-4 right-4 px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-['Space_Grotesk'] font-bold text-xs shadow-xl transition-all flex items-center gap-2 active:scale-95 z-20 border border-purple-400/40"
+          className="absolute bottom-4 right-4 px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-xl transition-all flex items-center gap-2 active:scale-95 z-20 border border-purple-400/40"
         >
           <span>Launch District Investigation</span>
           <span className="text-sm">→</span>

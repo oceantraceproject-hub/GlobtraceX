@@ -164,7 +164,7 @@ export const ThreeBangladeshMap: React.FC<ThreeBangladeshMapProps> = ({
               REALISTIC GIS ADMINISTRATIVE BOUNDARY LAYER
             </span>
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-black text-slate-900 font-['Space_Grotesk']">
+              <h3 className="text-sm font-black text-slate-900">
                 Bangladesh Regional Earth Observation
               </h3>
               <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200">
@@ -406,7 +406,7 @@ export const ThreeBangladeshMap: React.FC<ThreeBangladeshMapProps> = ({
         </svg>
 
         {/* Real-Time District Inspection Telemetry Overlay */}
-        <div className="absolute bottom-4 left-4 p-3.5 rounded-2xl bg-white/95 backdrop-blur-md border border-purple-200 shadow-xl max-w-xs text-xs space-y-1.5 z-20 pointer-events-none font-['Manrope']">
+        <div className="absolute bottom-4 left-4 p-3.5 rounded-2xl bg-white/95 backdrop-blur-md border border-purple-200 shadow-xl max-w-xs text-xs space-y-1.5 z-20 pointer-events-none font-sans">
           <div className="flex items-center justify-between gap-3">
             <span className="text-[10px] font-mono text-purple-700 font-bold uppercase tracking-wider">
               {hoveredDistrictData ? 'HOVER INSPECTION' : 'ACTIVE DISTRICT'}
@@ -416,7 +416,7 @@ export const ThreeBangladeshMap: React.FC<ThreeBangladeshMapProps> = ({
             </span>
           </div>
 
-          <h4 className="text-sm font-extrabold text-slate-900 font-['Space_Grotesk']">
+          <h4 className="text-sm font-extrabold text-slate-900">
             {(hoveredDistrictData || activeDistrictData).name} District
           </h4>
 

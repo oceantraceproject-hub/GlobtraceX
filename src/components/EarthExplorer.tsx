@@ -58,19 +58,8 @@ export interface EarthExplorerProps {
   comparisonCountryCode?: string;
 }
 
-// NASA GIBS WMTS Endpoint Templates (Authentic Open Satellite Data)
-const NASA_GIBS_BLUE_MARBLE_W =
-  'https://gibs.earthdata.nasa.gov/wmts/epsg4326/best/BlueMarble_NextGeneration/default/default/500m/0/0/0.jpeg';
-const NASA_GIBS_BLUE_MARBLE_E =
-  'https://gibs.earthdata.nasa.gov/wmts/epsg4326/best/BlueMarble_NextGeneration/default/default/500m/0/0/1.jpeg';
-const NASA_GIBS_VIIRS_NIGHT_W =
-  'https://gibs.earthdata.nasa.gov/wmts/epsg4326/best/VIIRS_CityLights_2012/default/default/500m/0/0/0.jpeg';
-const NASA_GIBS_VIIRS_NIGHT_E =
-  'https://gibs.earthdata.nasa.gov/wmts/epsg4326/best/VIIRS_CityLights_2012/default/default/500m/0/0/1.jpeg';
-const NASA_GIBS_CLOUDS_W =
-  'https://gibs.earthdata.nasa.gov/wmts/epsg4326/best/MODIS_Terra_Cloud_Fraction_Day/default/default/2km/0/0/0.png';
-const NASA_GIBS_CLOUDS_E =
-  'https://gibs.earthdata.nasa.gov/wmts/epsg4326/best/MODIS_Terra_Cloud_Fraction_Day/default/default/2km/0/0/1.png';
+// Procedural Planetary Surface Generation (No external textures or photos)
+
 
 // Vertex shader for the realistic planetary surface
 const earthVertexShader = `
@@ -313,7 +302,7 @@ export const EarthExplorer: React.FC<EarthExplorerProps> = ({
     setIsSearchOpen(false);
   };
 
-  // Build the High-Resolution Satellite & Night Texture Map
+  // Build the High-Resolution Procedural Planetary Surface (No external image downloads)
   const loadNasaTextures = useCallback(() => {
     const dayCanvas = document.createElement('canvas');
     dayCanvas.width = 2048;
@@ -330,20 +319,260 @@ export const EarthExplorer: React.FC<EarthExplorerProps> = ({
     cloudsCanvas.height = 1024;
     const cloudsCtx = cloudsCanvas.getContext('2d')!;
 
-    // 1. Procedural Deep Ocean Base (Instant First-Paint Shield)
+    // 1. Procedural Deep Ocean Base with realistic bathymetry
     const oceanGrad = dayCtx.createLinearGradient(0, 0, 0, 1024);
-    oceanGrad.addColorStop(0, '#040d1a');
-    oceanGrad.addColorStop(0.25, '#071830');
-    oceanGrad.addColorStop(0.5, '#0a2342');
-    oceanGrad.addColorStop(0.75, '#071830');
-    oceanGrad.addColorStop(1, '#040d1a');
+    oceanGrad.addColorStop(0, '#0a192f'); // Arctic / Polar deeps
+    oceanGrad.addColorStop(0.25, '#0c2340'); // Northern temperate
+    oceanGrad.addColorStop(0.5, '#091b34'); // Equatorial oceanic trench
+    oceanGrad.addColorStop(0.75, '#0c2340'); // Southern temperate
+    oceanGrad.addColorStop(1, '#0a192f'); // Antarctic deeps
     dayCtx.fillStyle = oceanGrad;
     dayCtx.fillRect(0, 0, 2048, 1024);
 
-    nightCtx.fillStyle = '#020610';
+    // Deep space dark ocean on night canvas
+    nightCtx.fillStyle = '#020712';
     nightCtx.fillRect(0, 0, 2048, 1024);
 
-    // Initial canvas textures
+    // Equirectangular projection mapping helper
+    const toCanvas = (lon: number, lat: number): [number, number] => [
+      ((lon + 180) / 360) * 2048,
+      ((90 - lat) / 180) * 1024,
+    ];
+
+    // Helper to draw filled landmasses with natural biome pigmentation
+    const drawLandmass = (coords: [number, number][], fillColor: string, strokeColor = '#1e3a5f', lineWidth = 1.0) => {
+      dayCtx.beginPath();
+      coords.forEach(([lon, lat], i) => {
+        const [x, y] = toCanvas(lon, lat);
+        if (i === 0) dayCtx.moveTo(x, y);
+        else dayCtx.lineTo(x, y);
+      });
+      dayCtx.closePath();
+      dayCtx.fillStyle = fillColor;
+      dayCtx.fill();
+      dayCtx.strokeStyle = strokeColor;
+      dayCtx.lineWidth = lineWidth;
+      dayCtx.stroke();
+    };
+
+    // Realistic natural terrain pigmentation
+    const terrainGreen = '#2d5a37'; // Tropical and temperate forests
+    const terrainSavanna = '#44663e'; // Grassland and savanna
+    const terrainArid = '#8d734c'; // Steppe and plateau
+    const terrainSahara = '#b8996b'; // Desert belt
+    const terrainSnow = '#e2e8f0'; // Polar ice and glaciers
+
+    // Eurasia & South Asia Landmass
+    drawLandmass(
+      [
+        [-9, 36], [0, 44], [10, 54], [25, 71], [60, 75], [100, 77], [140, 72], [170, 66],
+        [180, 64], [170, 60], [142, 50], [130, 40], [122, 30], [115, 22], [108, 12], [100, 4],
+        [98, 10], [92, 16], [92, 21], [88, 22], [85, 20], [80, 10], [77, 8], [73, 16], [68, 24],
+        [60, 25], [55, 28], [50, 30], [36, 31], [26, 36], [15, 38], [5, 36], [-9, 36],
+      ],
+      terrainGreen
+    );
+
+    // Tibetan Plateau / Himalaya Elevation
+    drawLandmass(
+      [
+        [75, 37], [85, 36], [95, 35], [102, 32], [96, 28], [88, 28], [82, 29], [76, 33],
+      ],
+      terrainArid
+    );
+
+    // Himalayan Permanent Snow Cap
+    drawLandmass(
+      [
+        [77, 33], [82, 30], [86, 28.5], [89, 28], [93, 29], [90, 29], [84, 31], [78, 34],
+      ],
+      terrainSnow
+    );
+
+    // Sahara & Arabian Desert Belt
+    drawLandmass(
+      [
+        [-17, 30], [10, 37], [32, 31], [50, 30], [58, 24], [55, 15], [44, 12], [35, 15],
+        [32, 22], [15, 22], [-17, 21], [-17, 30],
+      ],
+      terrainSahara
+    );
+
+    // Sub-Saharan Africa
+    drawLandmass(
+      [
+        [-17, 15], [10, 5], [42, 10], [51, 11], [40, -10], [35, -25], [30, -32], [18, -34],
+        [12, -15], [0, 5], [-15, 12], [-17, 15],
+      ],
+      terrainSavanna
+    );
+
+    // North America
+    drawLandmass(
+      [
+        [-168, 65], [-140, 70], [-100, 72], [-65, 60], [-55, 48], [-70, 42], [-80, 25],
+        [-90, 18], [-105, 20], [-115, 32], [-124, 48], [-150, 60], [-168, 65],
+      ],
+      terrainGreen
+    );
+
+    // South America
+    drawLandmass(
+      [
+        [-78, 10], [-60, 8], [-35, -5], [-40, -22], [-55, -40], [-68, -55], [-75, -45],
+        [-72, -18], [-80, -2], [-78, 10],
+      ],
+      terrainGreen
+    );
+
+    // Australia
+    drawLandmass(
+      [
+        [114, -22], [125, -15], [135, -12], [148, -20], [152, -35], [138, -38], [120, -35], [114, -25],
+      ],
+      terrainSahara
+    );
+
+    // Antarctica Ice Shield
+    drawLandmass(
+      [
+        [-180, -70], [180, -70], [180, -90], [-180, -90],
+      ],
+      terrainSnow
+    );
+
+    // Greenland Ice Sheet
+    drawLandmass(
+      [
+        [-52, 60], [-40, 65], [-25, 76], [-20, 82], [-45, 83], [-55, 75], [-52, 60],
+      ],
+      terrainSnow
+    );
+
+    // Render detailed polygons from 73 sovereign nations on day canvas
+    GLOBAL_COUNTRIES.forEach((c) => {
+      if (c.polygon && c.polygon.length >= 3) {
+        dayCtx.beginPath();
+        c.polygon.forEach(([lon, lat], i) => {
+          const [x, y] = toCanvas(lon, lat);
+          if (i === 0) dayCtx.moveTo(x, y);
+          else dayCtx.lineTo(x, y);
+        });
+        dayCtx.closePath();
+        dayCtx.fillStyle = 'rgba(56, 189, 248, 0.08)';
+        dayCtx.fill();
+        dayCtx.strokeStyle = 'rgba(167, 139, 250, 0.25)';
+        dayCtx.lineWidth = 0.8;
+        dayCtx.stroke();
+      }
+    });
+
+    // Bangladesh Special Highlight on Daytime Surface
+    const bdContour: [number, number][] = [
+      [88.05, 26.65], [89.00, 26.30], [89.90, 25.90], [90.50, 25.20],
+      [91.80, 25.25], [92.40, 24.80], [92.35, 23.90], [92.65, 22.40],
+      [92.30, 21.00], [91.80, 21.60], [91.40, 22.30], [90.50, 22.00],
+      [89.10, 21.70], [88.90, 22.80], [88.10, 24.50], [88.05, 26.65],
+    ];
+    dayCtx.beginPath();
+    bdContour.forEach(([lon, lat], i) => {
+      const [x, y] = toCanvas(lon, lat);
+      if (i === 0) dayCtx.moveTo(x, y);
+      else dayCtx.lineTo(x, y);
+    });
+    dayCtx.closePath();
+    dayCtx.fillStyle = '#7c3aed';
+    dayCtx.fill();
+    dayCtx.strokeStyle = '#ffffff';
+    dayCtx.lineWidth = 1.8;
+    dayCtx.stroke();
+
+    // Subtle Scientific Coordinate Graticules
+    dayCtx.strokeStyle = 'rgba(192, 132, 252, 0.18)';
+    dayCtx.lineWidth = 0.75;
+    for (let lat = -80; lat <= 80; lat += 20) {
+      const y = ((90 - lat) / 180) * 1024;
+      dayCtx.beginPath();
+      dayCtx.moveTo(0, y);
+      dayCtx.lineTo(2048, y);
+      dayCtx.stroke();
+    }
+    for (let lon = -180; lon <= 180; lon += 30) {
+      const x = ((lon + 180) / 360) * 2048;
+      dayCtx.beginPath();
+      dayCtx.moveTo(x, 0);
+      dayCtx.lineTo(x, 1024);
+      dayCtx.stroke();
+    }
+
+    // Tropic of Cancer (23.44°N) directly intersecting Bangladesh
+    dayCtx.strokeStyle = 'rgba(232, 121, 249, 0.55)';
+    dayCtx.lineWidth = 1.2;
+    const yTropic = ((90 - 23.436) / 180) * 1024;
+    dayCtx.beginPath();
+    dayCtx.moveTo(0, yTropic);
+    dayCtx.lineTo(2048, yTropic);
+    dayCtx.stroke();
+
+    // 2. Procedural Night Lights across Global Metropolitan Clusters
+    const globalMetros: [number, number, number][] = [
+      [90.41, 23.81, 7], // Dhaka
+      [77.20, 28.61, 8], // Delhi
+      [72.87, 19.07, 8], // Mumbai
+      [88.36, 22.57, 6], // Kolkata
+      [139.69, 35.68, 9], // Tokyo
+      [121.47, 31.23, 9], // Shanghai
+      [116.40, 39.90, 8], // Beijing
+      [103.81, 1.35, 6], // Singapore
+      [100.50, 13.75, 6], // Bangkok
+      [-0.12, 51.50, 8], // London
+      [2.35, 48.85, 8], // Paris
+      [13.40, 52.52, 6], // Berlin
+      [-74.00, 40.71, 9], // New York City
+      [-87.62, 41.87, 7], // Chicago
+      [-118.24, 34.05, 8], // Los Angeles
+      [-99.13, 19.43, 7], // Mexico City
+      [-46.63, -23.55, 8], // São Paulo
+      [-58.38, -34.60, 6], // Buenos Aires
+      [31.23, 30.04, 7], // Cairo
+      [3.37, 6.52, 6], // Lagos
+      [28.04, -26.20, 6], // Johannesburg
+      [151.20, -33.86, 7], // Sydney
+      [144.96, -37.81, 6], // Melbourne
+      [55.27, 25.20, 7], // Dubai
+      [46.71, 24.71, 6], // Riyadh
+      [37.61, 55.75, 7], // Moscow
+    ];
+
+    globalMetros.forEach(([lon, lat, radius]) => {
+      const [x, y] = toCanvas(lon, lat);
+      const radGrad = nightCtx.createRadialGradient(x, y, 0, x, y, radius * 2.5);
+      radGrad.addColorStop(0, 'rgba(255, 237, 160, 0.95)');
+      radGrad.addColorStop(0.3, 'rgba(251, 191, 36, 0.7)');
+      radGrad.addColorStop(0.7, 'rgba(245, 158, 11, 0.25)');
+      radGrad.addColorStop(1, 'rgba(217, 119, 6, 0)');
+      nightCtx.fillStyle = radGrad;
+      nightCtx.beginPath();
+      nightCtx.arc(x, y, radius * 2.5, 0, Math.PI * 2);
+      nightCtx.fill();
+    });
+
+    // 3. Procedural Dynamic Atmospheric Cloud Swirls
+    cloudsCtx.clearRect(0, 0, 2048, 1024);
+    for (let i = 0; i < 45; i++) {
+      const cx = (i * 47) % 2048;
+      const cy = 200 + Math.sin(i * 0.45) * 220 + (i % 3) * 120;
+      const cloudGrad = cloudsCtx.createRadialGradient(cx, cy, 10, cx, cy, 140);
+      cloudGrad.addColorStop(0, 'rgba(255, 255, 255, 0.45)');
+      cloudGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.2)');
+      cloudGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      cloudsCtx.fillStyle = cloudGrad;
+      cloudsCtx.beginPath();
+      cloudsCtx.arc(cx, cy, 140, 0, Math.PI * 2);
+      cloudsCtx.fill();
+    }
+
+    // Create GPU canvas textures
     const dayTexture = new THREE.CanvasTexture(dayCanvas);
     dayTexture.wrapS = THREE.RepeatWrapping;
     dayTexture.wrapT = THREE.ClampToEdgeWrapping;
@@ -356,77 +585,8 @@ export const EarthExplorer: React.FC<EarthExplorerProps> = ({
     cloudsTexture.wrapS = THREE.RepeatWrapping;
     cloudsTexture.wrapT = THREE.ClampToEdgeWrapping;
 
-    // 2. Asynchronously stream authentic NASA GIBS Blue Marble tiles
-    const imgWest = new Image();
-    const imgEast = new Image();
-    imgWest.crossOrigin = 'anonymous';
-    imgEast.crossOrigin = 'anonymous';
-
-    let loadedCount = 0;
-    const checkComplete = () => {
-      loadedCount++;
-      if (loadedCount === 2) {
-        dayCtx.drawImage(imgWest, 0, 0, 1024, 1024);
-        dayCtx.drawImage(imgEast, 1024, 0, 1024, 1024);
-        dayTexture.needsUpdate = true;
-        setIsImageryLoading(false);
-        setImagerySourceLabel('NASA GIBS Blue Marble (Verified Open Satellite)');
-      }
-    };
-
-    imgWest.onload = checkComplete;
-    imgEast.onload = checkComplete;
-    imgWest.onerror = () => {
-      // Graceful fallback to high-resolution vector topographic basemap
-      console.warn('NASA GIBS tile fallback active');
-      setIsImageryLoading(false);
-    };
-    imgEast.onerror = () => {
-      setIsImageryLoading(false);
-    };
-
-    imgWest.src = NASA_GIBS_BLUE_MARBLE_W;
-    imgEast.src = NASA_GIBS_BLUE_MARBLE_E;
-
-    // 3. Asynchronously stream authentic NASA VIIRS Night Lights
-    const nightWest = new Image();
-    const nightEast = new Image();
-    nightWest.crossOrigin = 'anonymous';
-    nightEast.crossOrigin = 'anonymous';
-
-    let nightLoaded = 0;
-    const checkNight = () => {
-      nightLoaded++;
-      if (nightLoaded === 2) {
-        nightCtx.drawImage(nightWest, 0, 0, 1024, 1024);
-        nightCtx.drawImage(nightEast, 1024, 0, 1024, 1024);
-        nightTexture.needsUpdate = true;
-      }
-    };
-    nightWest.onload = checkNight;
-    nightEast.onload = checkNight;
-    nightWest.src = NASA_GIBS_VIIRS_NIGHT_W;
-    nightEast.src = NASA_GIBS_VIIRS_NIGHT_E;
-
-    // 4. Stream real NASA MODIS cloud coverage
-    const cloudWest = new Image();
-    const cloudEast = new Image();
-    cloudWest.crossOrigin = 'anonymous';
-    cloudEast.crossOrigin = 'anonymous';
-
-    let cloudLoaded = 0;
-    const checkClouds = () => {
-      cloudLoaded++;
-      if (cloudLoaded === 2) {
-        cloudsCtx.drawImage(cloudWest, 0, 0, 1024, 1024);
-        cloudsCtx.drawImage(cloudEast, 1024, 0, 1024, 1024);
-        cloudsTexture.needsUpdate = true;
-      }
-    };
-    cloudWest.onload = checkClouds;
-    cloudEast.onload = checkClouds;
-    cloudWest.src = NASA_GIBS_CLOUDS_W;
-    cloudEast.src = NASA_GIBS_CLOUDS_E;
+    setIsImageryLoading(false);
+    setImagerySourceLabel('Procedural 3D Planetary Surface • WebGL Vector');
 
     return { dayTexture, nightTexture, cloudsTexture };
   }, []);
@@ -788,7 +948,7 @@ export const EarthExplorer: React.FC<EarthExplorerProps> = ({
   };
 
   return (
-    <div className={`relative w-full ${heightClass} rounded-3xl overflow-hidden bg-[#050b14] border border-purple-900/40 select-none shadow-2xl font-['Manrope']`}>
+    <div className={`relative w-full ${heightClass} rounded-3xl overflow-hidden bg-[#050b14] border border-purple-900/40 select-none shadow-2xl font-sans`}>
       {/* 3D WebGL Canvas Viewport */}
       <div
         ref={containerRef}
@@ -822,7 +982,7 @@ export const EarthExplorer: React.FC<EarthExplorerProps> = ({
             <span className="text-[10px] font-mono text-purple-400 uppercase tracking-wider font-bold block">
               SELECTED OBSERVATION TARGET
             </span>
-            <div className="text-sm sm:text-base font-extrabold font-['Space_Grotesk'] text-slate-100 flex items-center gap-1.5">
+            <div className="text-sm sm:text-base font-extrabold text-slate-100 flex items-center gap-1.5">
               <span>{activeCountry.name}</span>
               <span className="text-xs font-mono text-purple-300 font-semibold">({activeCountry.code3})</span>
             </div>
@@ -925,7 +1085,7 @@ export const EarthExplorer: React.FC<EarthExplorerProps> = ({
                   }`}
                 >
                   <div className="truncate">
-                    <div className="font-['Space_Grotesk'] font-bold text-slate-100 truncate">
+                    <div className="font-bold text-slate-100 truncate">
                       {country.name}
                     </div>
                     <div className="text-[10px] font-mono text-slate-400">
@@ -950,7 +1110,7 @@ export const EarthExplorer: React.FC<EarthExplorerProps> = ({
               <span className="text-[10px] font-mono text-purple-400 uppercase tracking-widest font-bold block">
                 STATISTICAL EVIDENCE CARD
               </span>
-              <h3 className="text-lg font-black text-white font-['Space_Grotesk'] tracking-tight">
+              <h3 className="text-lg font-black text-white tracking-tight">
                 {activeCountry.name}
               </h3>
               <p className="text-[11px] font-mono text-slate-400">
@@ -1008,7 +1168,7 @@ export const EarthExplorer: React.FC<EarthExplorerProps> = ({
               </span>
             </div>
 
-            <div className="text-2xl font-black font-['Space_Grotesk'] tracking-tight text-white flex items-baseline gap-2 pt-1">
+            <div className="text-2xl font-black tracking-tight text-white flex items-baseline gap-2 pt-1">
               <span>
                 {activeResult.slope.valuePerDecade > 0 ? '+' : ''}
                 {activeResult.slope.valuePerDecade}

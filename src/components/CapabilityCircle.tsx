@@ -32,13 +32,13 @@ const CAPABILITIES: CapabilityNode[] = [
     id: 'explore',
     number: '01',
     title: 'EXPLORE EARTH',
-    tagline: 'Google Maps Live Planetary Layer',
+    tagline: 'Procedural 3D Earth System',
     description:
-      'Inspect 73 sovereign nations across satellite and vector grids with real-time NASA observational layers.',
+      'Inspect 73 sovereign nations across realistic procedural terrain and vector grids with real-time NASA observational layers.',
     route: '/investigate',
     icon: Globe,
     color: '#8b5cf6',
-    badge: 'BASE SATELLITE',
+    badge: '3D WEBGL EARTH',
   },
   {
     id: 'investigate',
@@ -161,7 +161,7 @@ export const CapabilityCircle: React.FC<{
   const center = { x: 300, y: 300 };
 
   return (
-    <section className="py-20 bg-gradient-to-b from-[#fafaff] via-white to-purple-50/30 text-slate-900 font-['Plus_Jakarta_Sans',sans-serif]">
+    <section className="py-20 bg-gradient-to-b from-[#fafaff] via-white to-purple-50/30 text-slate-900 font-sans">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-14">
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto space-y-3">
@@ -169,7 +169,7 @@ export const CapabilityCircle: React.FC<{
             <Sparkles className="w-3.5 h-3.5 text-purple-600" />
             <span>INTERACTIVE SCIENTIFIC CAPABILITY NETWORK</span>
           </div>
-          <h2 className="text-3xl sm:text-4xl font-black text-slate-950 tracking-tight font-['Plus_Jakarta_Sans']">
+          <h2 className="text-3xl sm:text-4xl font-black text-slate-950 tracking-tight">
             What Can You Discover With GlobTraceX?
           </h2>
           <p className="text-sm sm:text-base text-slate-600 leading-relaxed font-sans">
@@ -228,7 +228,7 @@ export const CapabilityCircle: React.FC<{
                 <span className="text-[10px] font-mono tracking-widest text-purple-300 font-bold uppercase">
                   NUCLEUS
                 </span>
-                <span className="text-sm sm:text-base font-black tracking-tight text-white font-['Plus_Jakarta_Sans']">
+                <span className="text-sm sm:text-base font-black tracking-tight text-white">
                   GLOBTRACEX
                 </span>
                 <span className="text-[9px] font-mono text-slate-300 mt-0.5">
@@ -299,7 +299,7 @@ export const CapabilityCircle: React.FC<{
                 </div>
 
                 <div className="space-y-2">
-                  <h3 className="text-2xl font-black text-slate-950 font-['Plus_Jakarta_Sans'] tracking-tight">
+                  <h3 className="text-2xl font-black text-slate-950 tracking-tight">
                     {activeNode.title}
                   </h3>
                   <p className="text-xs font-mono font-bold text-purple-700 uppercase tracking-wide">

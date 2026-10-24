@@ -133,7 +133,7 @@ export const GlobTraceLogo: React.FC<GlobTraceLogoProps> = ({
     return (
       <div className={`inline-flex items-center gap-2 ${className}`}>
         {Symbol}
-        <span className="font-['Space_Grotesk'] font-bold text-base tracking-tight text-slate-900">
+        <span className="font-bold text-base tracking-tight text-slate-900">
           GLOB<span className="text-purple-600">TRACE</span>X
         </span>
       </div>
@@ -145,7 +145,7 @@ export const GlobTraceLogo: React.FC<GlobTraceLogoProps> = ({
       {Symbol}
       <div className="flex flex-col text-left">
         <div className="flex items-center gap-1.5 leading-none">
-          <span className="font-['Space_Grotesk'] font-black text-lg tracking-tight text-slate-950">
+          <span className="font-black text-lg tracking-tight text-slate-950">
             GLOB<span className="text-purple-600">TRACE</span>
             <span className="text-purple-800">X</span>
           </span>

@@ -100,10 +100,10 @@ export const LiveIntelligencePanel: React.FC<LiveIntelligencePanelProps> = ({
             </h2>
           </div>
 
-          {/* Diagnostic Situation Badge */}
-          <div className="flex items-center gap-3 shrink-0">
+          {/* Diagnostic Situation Badge & CTA */}
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             <div
-              className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border ${situation.badgeBg} ${situation.badgeBorder} ${situation.badgeColor} shadow-2xs`}
+              className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border ${situation.badgeBg} ${situation.badgeBorder} ${situation.badgeColor} shadow-2xs`}
             >
               {renderSituationIcon()}
               <span className="text-xs font-bold font-mono tracking-tight uppercase">
@@ -113,12 +113,12 @@ export const LiveIntelligencePanel: React.FC<LiveIntelligencePanelProps> = ({
 
             <button
               onClick={onOpenAnalysisModal}
-              className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 active:scale-95 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm shadow-purple-600/20 shrink-0"
+              className="px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl bg-purple-600 hover:bg-purple-700 active:scale-95 text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm shadow-purple-600/20 whitespace-nowrap"
               aria-label="View Analysis and Recommendations"
             >
-              <Eye className="w-3.5 h-3.5" />
-              <span>View Analysis & Recommendations</span>
-              <ChevronRight className="w-3.5 h-3.5 text-purple-200" />
+              <Eye className="w-3.5 h-3.5 shrink-0" />
+              <span>View Analysis &amp; Recommendations</span>
+              <ChevronRight className="w-3.5 h-3.5 text-purple-200 shrink-0" />
             </button>
           </div>
         </div>

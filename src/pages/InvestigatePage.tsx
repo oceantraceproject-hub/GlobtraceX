@@ -299,7 +299,7 @@ export const InvestigatePage: React.FC<InvestigatePageProps> = ({ onNavigate }) 
             </div>
 
             {/* Quick Actions */}
-            <div className="flex items-center gap-2.5">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
               <button
                 onClick={() => onNavigate('/compare')}
                 className="px-3.5 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-900 text-xs font-bold font-mono transition-colors flex items-center gap-1.5"
@@ -319,15 +319,16 @@ export const InvestigatePage: React.FC<InvestigatePageProps> = ({ onNavigate }) 
           </div>
 
           {/* 5 NASA Variable Selector Tabs */}
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-1">
-            {variableTabs.map((tab) => {
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 pt-1">
+            {variableTabs.map((tab, idx) => {
               const Icon = tab.icon;
               const isSelected = selectedVariable === tab.id;
+              const isLastOdd = idx === 4;
               return (
                 <button
                   key={tab.id}
                   onClick={() => setSelectedVariable(tab.id)}
-                  className={`p-3 rounded-2xl border text-left transition-all ${
+                  className={`p-3 rounded-2xl border text-left transition-all ${isLastOdd ? 'col-span-2 sm:col-span-1' : ''} ${
                     isSelected
                       ? 'bg-purple-900 text-white border-purple-900 shadow-md ring-2 ring-purple-600/30'
                       : 'bg-white text-slate-700 border-purple-100 hover:border-purple-300 hover:bg-purple-50/40'

@@ -78,7 +78,7 @@ export default function App() {
   return (
     <AuthProvider>
       <LanguageProvider>
-        <div className="min-h-screen flex flex-col bg-[#fafaff] text-slate-900 font-sans selection:bg-purple-600 selection:text-white">
+        <div className="min-h-screen flex flex-col bg-[#fafaff] text-slate-900 font-sans selection:bg-purple-600 selection:text-white overflow-x-hidden w-full max-w-full">
           {/* Main Top Navigation Header */}
           <Navbar
             currentRoute={currentRoute}

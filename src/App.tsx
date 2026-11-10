@@ -17,6 +17,8 @@ const ReferencesPage = lazy(() => import('./pages/ReferencesPage').then((m) => (
 const AboutPage = lazy(() => import('./pages/AboutPage').then((m) => ({ default: m.AboutPage })));
 const TeamPage = lazy(() => import('./pages/TeamPage').then((m) => ({ default: m.TeamPage })));
 const AuthPage = lazy(() => import('./pages/AuthPage').then((m) => ({ default: m.AuthPage })));
+const ProfilePage = lazy(() => import('./pages/ProfilePage').then((m) => ({ default: m.ProfilePage })));
+const VariableExplorerPage = lazy(() => import('./pages/VariableExplorerPage').then((m) => ({ default: m.VariableExplorerPage })));
 const AdminPage = lazy(() => import('./pages/AdminPage').then((m) => ({ default: m.AdminPage })));
 
 function ScientificLoadingFallback() {
@@ -129,7 +131,13 @@ export default function App() {
 
               {currentRoute === '/team' && <TeamPage />}
 
-              {(currentRoute === '/auth' || currentRoute === '/sign-in' || currentRoute === '/account') && (
+              {currentRoute === '/variables' && <VariableExplorerPage onNavigate={navigate} />}
+
+              {(currentRoute === '/profile' || currentRoute === '/account') && (
+                <ProfilePage onNavigate={navigate} />
+              )}
+
+              {(currentRoute === '/auth' || currentRoute === '/sign-in') && (
                 <AuthPage onNavigate={navigate} />
               )}
 
@@ -145,6 +153,7 @@ export default function App() {
                 '/trends',
                 '/countries',
                 '/compare',
+                '/variables',
                 '/atlas',
                 '/datasets',
                 '/datasets/hot-humid-days',
@@ -163,6 +172,7 @@ export default function App() {
                 '/team',
                 '/auth',
                 '/sign-in',
+                '/profile',
                 '/account',
                 '/admin',
               ].includes(currentRoute) && !currentRoute.startsWith('/country/') && (

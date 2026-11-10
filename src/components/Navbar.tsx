@@ -30,15 +30,16 @@ interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({ currentRoute, onNavigate, onOpenSearch }) => {
   const { language, toggleLanguage, t } = useLanguage();
-  const { user, signOut, isAdmin } = useAuth();
+  const { user, signOut, isAdmin, memberNumber } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [alertModalOpen, setAlertModalOpen] = useState(false);
 
   const navLinks = [
     { label: t('nav.home'), route: '/', icon: Globe },
     { label: t('nav.investigate'), route: '/investigate', icon: Compass },
-    { label: 'Atlas', route: '/atlas', icon: Layers },
+    { label: 'Variables', route: '/variables', icon: Layers },
     { label: t('nav.compare'), route: '/compare', icon: GitCompare },
+    { label: 'Atlas', route: '/atlas', icon: Layers },
     { label: t('nav.datasets'), route: '/datasets', icon: Database },
     { label: t('nav.team'), route: '/team', icon: Users },
     { label: t('nav.about'), route: '/about', icon: Info },
@@ -131,12 +132,12 @@ export const Navbar: React.FC<NavbarProps> = ({ currentRoute, onNavigate, onOpen
           {user ? (
             <div className="flex items-center gap-1 sm:gap-2 shrink-0">
               <button
-                onClick={() => handleNav(isAdmin ? '/admin' : '/auth')}
-                className="p-1.5 sm:p-2 rounded-xl bg-purple-100 text-purple-800 hover:bg-purple-200 transition-colors flex items-center gap-1 text-xs font-semibold"
-                title={user.email || 'User Account'}
+                onClick={() => handleNav(isAdmin ? '/admin' : '/profile')}
+                className="p-1.5 sm:p-2 rounded-xl bg-purple-100 text-purple-800 hover:bg-purple-200 transition-colors flex items-center gap-1.5 text-xs font-mono font-bold"
+                title={`${memberNumber ? `GlobTraceX Member: ${memberNumber} · ` : ''}${user.email || 'User Account'}`}
               >
-                <User className="w-4 h-4" />
-                <span className="hidden md:inline max-w-[90px] truncate">{user.email?.split('@')[0]}</span>
+                <User className="w-4 h-4 text-purple-700" />
+                <span className="hidden md:inline max-w-[120px] truncate">{memberNumber || user.email?.split('@')[0]}</span>
               </button>
               <button
                 onClick={signOut}

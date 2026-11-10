@@ -1,0 +1,17 @@
+{
+  "nextSeq": 102,
+  "members": {
+    "test-user-123": {
+      "memberNumber": "GTX-M-0100",
+      "email": "test@globtracex.nasa",
+      "displayName": "Test Investigator",
+      "assignedAt": "2026-11-09T05:26:27.225Z"
+    },
+    "test-user-456": {
+      "memberNumber": "GTX-M-0101",
+      "email": "second@globtracex.nasa",
+      "displayName": "Second Investigator",
+      "assignedAt": "2026-11-09T05:26:34.399Z"
+    }
+  }
+}

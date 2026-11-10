@@ -27,6 +27,7 @@ import {
   Activity,
   FileText,
   Bell,
+  Users,
 } from 'lucide-react';
 
 interface HomePageProps {
@@ -477,6 +478,111 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
                     <span>Official NASA</span>
                     <ExternalLink className="w-3 h-3" />
                   </a>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Team Protichamp Roster Spotlight */}
+      <section className="py-16 sm:py-20 bg-white border-b border-purple-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+            <div className="space-y-2 max-w-2xl">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-purple-50 text-purple-900 border border-purple-200 text-xs font-mono font-bold tracking-wider uppercase">
+                <Users className="w-3.5 h-3.5 text-purple-700" />
+                <span>PROJECT TEAM • NASA SPACE APPS 2026</span>
+              </div>
+              <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-950">
+                Team Protichamp
+              </h2>
+              <p className="text-sm text-slate-600 leading-relaxed font-sans">
+                The student engineering and research team that designed, mathematically validated, and engineered GlobTraceX for Challenge 02: “Be an Earth System Trend Detective!”
+              </p>
+            </div>
+
+            <button
+              onClick={() => onNavigate('/team')}
+              className="px-5 py-2.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-900 font-mono font-bold text-xs border border-purple-200 transition-colors flex items-center gap-2 shrink-0 active:scale-95 shadow-2xs"
+            >
+              <span>Meet Full Team & Charter</span>
+              <ArrowRight className="w-3.5 h-3.5 text-purple-700" />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[
+              {
+                id: 'talha',
+                name: 'Abdullahil Baki Talha',
+                role: 'Team Lead',
+                image: '/assets/aistudio/4A1D9AA2-7BFF-4B0B-B1C9-021421492A4E_60e1f5fb.png',
+                objectPosition: 'object-[center_22%]',
+                badge: 'Project Lead',
+                focus: 'Planetary Geospatial Strategy & Research Coordination',
+              },
+              {
+                id: 'riyad',
+                name: 'Tanzin Rahman Riyad',
+                role: 'Lead Developer',
+                image: '/assets/aistudio/74A04688-0F0B-4E98-9D1D-76BF0DB20F09_374fb2c3.png',
+                objectPosition: 'object-[center_25%]',
+                badge: 'Core Architecture',
+                focus: 'Full-Stack Architecture & Vector Mapping Engine',
+              },
+              {
+                id: 'fatiha',
+                name: 'Sayeda Isma Fatiha',
+                role: 'Data Analyst',
+                image: '/assets/aistudio/5dc5f31a-ab1e-415f-8860-443eabafe83c_c2b7c0e9.jpeg',
+                objectPosition: 'object-[center_22%]',
+                badge: 'Data Modeling',
+                focus: 'Satellite Telemetry & Statistical Verification',
+              },
+              {
+                id: 'usha',
+                name: 'Moumita Ehasan Usha',
+                role: 'Research & Communications Lead',
+                image: '/assets/aistudio/4ffe7b2f-594a-437b-a968-1537c71c882b_7e55022b.jpeg',
+                objectPosition: 'object-[center_20%]',
+                badge: 'Scientific Research',
+                focus: 'Impact Synthesis & Scientific Communications',
+              },
+            ].map((member) => (
+              <div
+                key={member.id}
+                onClick={() => onNavigate('/team')}
+                className="group cursor-pointer bg-[#fafaff] hover:bg-white rounded-3xl p-4 border border-purple-100 shadow-2xs hover:shadow-lg hover:border-purple-300 transition-all duration-300 flex flex-col justify-between"
+              >
+                <div className="space-y-3">
+                  <div className="w-full aspect-[4/5] rounded-2xl overflow-hidden bg-slate-100 border border-purple-100 relative shadow-2xs">
+                    <img
+                      src={member.image}
+                      alt={member.name}
+                      className={`w-full h-full object-cover ${member.objectPosition} group-hover:scale-104 transition-transform duration-500 ease-out`}
+                      loading="lazy"
+                    />
+                    <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-slate-950/40 to-transparent pointer-events-none" />
+                  </div>
+
+                  <div className="space-y-0.5">
+                    <h3 className="text-base font-black text-slate-950 tracking-tight leading-snug group-hover:text-purple-900 transition-colors">
+                      {member.name}
+                    </h3>
+                    <p className="text-[11px] font-mono font-bold text-purple-700 uppercase tracking-wider">
+                      {member.role}
+                    </p>
+                  </div>
+
+                  <p className="text-xs text-slate-500 leading-relaxed font-sans line-clamp-2">
+                    {member.focus}
+                  </p>
+                </div>
+
+                <div className="mt-3 pt-2.5 border-t border-purple-100 flex items-center justify-between text-[10px] font-mono text-purple-700 font-bold">
+                  <span>View Profile</span>
+                  <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
                 </div>
               </div>
             ))}

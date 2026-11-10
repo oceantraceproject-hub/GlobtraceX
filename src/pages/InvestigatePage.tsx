@@ -22,6 +22,8 @@ import {
   ScientificObservation,
 } from '../compute/globTraceScience';
 import { EarthExplorer } from '../components/EarthExplorer';
+import { WorldMapExplorer } from '../components/WorldMapExplorer';
+import { TrendAnalysisWorkspace } from '../components/TrendAnalysisWorkspace';
 import { GlobTraceChart } from '../components/GlobTraceChart';
 import { EvidenceDrawer } from '../components/EvidenceDrawer';
 import { TrendAlertModal } from '../components/TrendAlertModal';
@@ -80,6 +82,7 @@ export const InvestigatePage: React.FC<InvestigatePageProps> = ({ onNavigate }) 
   // Scientific Variable & Chart Controls
   const [selectedVariable, setSelectedVariable] = useState<'lst' | 'rainfall' | 'ndvi' | 'tws' | 'solar'>('lst');
   const [useAnomalies, setUseAnomalies] = useState<boolean>(true);
+  const [mapViewMode, setMapViewMode] = useState<'2d' | '3d'>('2d');
   const [isEvidenceDrawerOpen, setIsEvidenceDrawerOpen] = useState<boolean>(false);
   const [isAlertModalOpen, setIsAlertModalOpen] = useState<boolean>(false);
 
@@ -581,35 +584,63 @@ export const InvestigatePage: React.FC<InvestigatePageProps> = ({ onNavigate }) 
 
           {/* Center & Right Column: Interactive 3D Earth, Chart, and Scientific Evidence (8 cols) */}
           <div className="lg:col-span-8 space-y-6 min-w-0">
-            {/* 3D Earth System Header & Status Bar */}
+            {/* Map View Mode Toggle & Status Bar */}
             <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-2xl bg-white border border-purple-100 shadow-xs">
-              <div className="flex items-center gap-2 text-xs font-mono">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-purple-100/80 text-purple-900 font-bold border border-purple-200">
-                  <Globe className="w-3.5 h-3.5 text-purple-700" />
-                  3D Interactive Earth System
-                </span>
-                <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200">
-                  Procedural WebGL
-                </span>
+              <div className="flex items-center gap-1.5 text-xs font-mono">
+                <button
+                  onClick={() => setMapViewMode('2d')}
+                  className={`px-3 py-1 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                    mapViewMode === '2d'
+                      ? 'bg-purple-900 text-white shadow-xs'
+                      : 'bg-purple-50 text-slate-700 hover:bg-purple-100'
+                  }`}
+                >
+                  <MapPin className="w-3.5 h-3.5" />
+                  <span>2D Scientific Vector Map (Default)</span>
+                </button>
+
+                <button
+                  onClick={() => setMapViewMode('3d')}
+                  className={`px-3 py-1 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                    mapViewMode === '3d'
+                      ? 'bg-purple-900 text-white shadow-xs'
+                      : 'bg-purple-50 text-slate-700 hover:bg-purple-100'
+                  }`}
+                >
+                  <Globe className="w-3.5 h-3.5" />
+                  <span>3D Earth Globe</span>
+                </button>
               </div>
 
               <span className="text-[11px] font-mono text-slate-500 pr-2">
-                Active Region: <strong className="text-slate-800">{activeCountry.name}</strong> • Variable: <strong className="text-purple-700 uppercase">{selectedVariable}</strong>
+                Active: <strong className="text-slate-800">{activeCountry.name}</strong> • Variable: <strong className="text-purple-700 uppercase">{selectedVariable}</strong>
               </span>
             </div>
 
-            {/* Earth Explorer 3D Canvas */}
-            <EarthExplorer
-              initialLevel={isDistrictMode ? 'district' : 'country'}
-              selectedCountryCode={activeCountry.code}
-              onSelectCountry={(code) => setSelectedCountryCode(code)}
-              selectedDistrictId={activeDistrict.id}
-              onSelectDistrict={(id) => setSelectedDistrictId(id)}
-              activeVariable={selectedVariable}
-              dataset={activeDataset}
-              heightClass="h-[460px] sm:h-[520px] lg:h-[560px]"
-              showInvestigationAction={false}
-            />
+            {/* Geographical Interface: 2D Vector Map or 3D Earth Globe */}
+            {mapViewMode === '2d' ? (
+              <WorldMapExplorer
+                selectedCountryCode={activeCountry.code}
+                onSelectCountry={(code) => {
+                  setSelectedCountryCode(code);
+                  if (code !== 'BD') setIsDistrictMode(false);
+                }}
+                activeVariable={selectedVariable}
+                onToggle3D={() => setMapViewMode('3d')}
+              />
+            ) : (
+              <EarthExplorer
+                initialLevel={isDistrictMode ? 'district' : 'country'}
+                selectedCountryCode={activeCountry.code}
+                onSelectCountry={(code) => setSelectedCountryCode(code)}
+                selectedDistrictId={activeDistrict.id}
+                onSelectDistrict={(id) => setSelectedDistrictId(id)}
+                activeVariable={selectedVariable}
+                dataset={activeDataset}
+                heightClass="h-[460px] sm:h-[520px] lg:h-[560px]"
+                showInvestigationAction={false}
+              />
+            )}
 
             {/* Scientific Evidence Card: The Four Core Questions Results */}
             <div className="p-5 sm:p-6 rounded-2xl bg-white border border-purple-100 shadow-sm space-y-5 min-w-0">
@@ -732,6 +763,15 @@ export const InvestigatePage: React.FC<InvestigatePageProps> = ({ onNavigate }) 
                 height={320}
               />
             </div>
+
+            {/* Complete NASA Trend Analysis Workspace */}
+            <TrendAnalysisWorkspace
+              country={activeCountry}
+              result={scientificResult}
+              observations={observations}
+              selectedVariable={selectedVariable}
+              onNavigate={onNavigate}
+            />
 
             {/* Sub-Period Stability & Multi-Sensor Earth Change Fingerprint */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

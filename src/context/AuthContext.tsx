@@ -19,6 +19,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   isAdmin: boolean;
+  memberNumber: string | null;
   signInWithGoogle: () => Promise<void>;
   signInWithEmail: (email: string, pass: string) => Promise<void>;
   signUpWithEmail: (email: string, pass: string, name?: string) => Promise<void>;
@@ -34,6 +35,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [memberNumber, setMemberNumber] = useState<string | null>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -41,6 +43,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
 
       if (currentUser) {
+        // Fetch or allocate atomic sequential member number from backend
+        let allocatedNumber = 'GTX-M-0100';
+        try {
+          const res = await fetch('/api/auth/member-number', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              uid: currentUser.uid,
+              email: currentUser.email || '',
+              displayName: currentUser.displayName || '',
+            }),
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.memberNumber) {
+              allocatedNumber = data.memberNumber;
+              setMemberNumber(data.memberNumber);
+            }
+          }
+        } catch (err) {
+          console.warn('Could not query member number sequence:', err);
+        }
+
         // Upsert user profile record
         try {
           const userRef = doc(db, 'users', currentUser.uid);
@@ -51,6 +76,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               email: currentUser.email || '',
               displayName: currentUser.displayName || '',
               photoURL: currentUser.photoURL || '',
+              memberNumber: allocatedNumber,
               createdAt: new Date().toISOString(),
             },
             { merge: true }
@@ -58,6 +84,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } catch (err) {
           console.warn('Could not sync user profile to firestore:', err);
         }
+      } else {
+        setMemberNumber(null);
       }
     });
 
@@ -132,6 +160,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         loading,
         isAdmin,
+        memberNumber,
         signInWithGoogle,
         signInWithEmail,
         signUpWithEmail,

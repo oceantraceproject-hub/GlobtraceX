@@ -5,6 +5,7 @@ import { BANGLADESH_DISTRICTS } from '../data/bangladeshData';
 import { NASA_DATASET_REGISTRY } from '../data/nasaRegistry';
 import { computeCountryTrend, computeDeterministicTrend, GlobalScientificResult } from '../compute/globTraceScience';
 import { EarthExplorer } from '../components/EarthExplorer';
+import { OppositeTrendDetector } from '../components/OppositeTrendDetector';
 import {
   GitCompare,
   MapPin,
@@ -395,6 +396,17 @@ export const ComparePage: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* Opposite Trend Detector & Planetary Polarity Analysis */}
+        {comparisonMode === 'countries' && (
+          <OppositeTrendDetector
+            countryA={countryA}
+            countryB={countryB}
+            resultA={resultA}
+            resultB={resultB}
+            selectedVariable={selectedVariable}
+          />
+        )}
 
         {/* Spatial Aggregation & Scientific Integrity Notice */}
         <div className="p-4 rounded-2xl bg-purple-50 border border-purple-200 text-xs text-slate-700 leading-relaxed max-w-3xl mx-auto text-center font-mono space-y-1">
